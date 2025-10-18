@@ -650,5 +650,23 @@ public partial class MainForm : Form
         }
     }
     
+    private void btnTest_Click(object sender, EventArgs e)
+    {
+        try
+        {
+            using var testForm = new TestForm(_logger, _chromeDriverService);
+            testForm.ShowDialog();
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "خطا در باز کردن فرم تست");
+            MessageBox.Show(
+                $"خطا در باز کردن فرم تست:\n{ex.Message}",
+                "خطا",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Error);
+        }
+    }
+    
     #endregion
 }

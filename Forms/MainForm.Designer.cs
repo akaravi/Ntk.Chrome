@@ -98,8 +98,19 @@ partial class MainForm
             form.ShowDialog();
         };
 
+        btnTest = new Button();
+        btnTest.Text = "TEST";
+        btnTest.BackColor = Color.FromArgb(156, 39, 176);
+        btnTest.ForeColor = Color.White;
+        btnTest.Size = new Size(180, 40);
+        btnTest.Dock = DockStyle.Top;
+        btnTest.Margin = new Padding(0, 5, 0, 5);
+        btnTest.FlatStyle = FlatStyle.Flat;
+        btnTest.Click += btnTest_Click;
+
         // Add buttons to right panel
         rightPanel.Controls.AddRange(new Control[] { 
+            btnTest,
             btnAppSettings,
             btnSiteSettings,
             btnStop,
@@ -316,4 +327,5 @@ partial class MainForm
     private RadioButton radioButtonText;
     private RadioButton radioButtonJson;
     private RadioButton radioButtonHtml;
+    private Button btnTest;
 }
