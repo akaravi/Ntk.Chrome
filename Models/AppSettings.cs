@@ -14,12 +14,30 @@ public class WebsiteSettings
 {
     public string WebsiteUrl { get; set; } = string.Empty;
     public List<WebsiteField> Fields { get; set; } = new();
+    public List<UrlMonitoringConfig> UrlMonitoring { get; set; } = new();
 }
 
 public class WebsiteField
 {
     public string Name { get; set; } = string.Empty;
     public string Value { get; set; } = string.Empty;
+}
+
+public class UrlMonitoringConfig
+{
+    public string Name { get; set; } = string.Empty;
+    public string Url { get; set; } = string.Empty;
+    public List<MonitoringParameter> Parameters { get; set; } = new();
+    public bool ShowPopup { get; set; } = true;
+    public bool LogToFile { get; set; } = true;
+    public string PopupTitle { get; set; } = "URL Monitoring";
+}
+
+public class MonitoringParameter
+{
+    public string Name { get; set; } = string.Empty;
+    public string Description { get; set; } = string.Empty;
+    public bool Required { get; set; } = false;
 }
 
 public class RequestInfo
