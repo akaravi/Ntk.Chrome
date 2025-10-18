@@ -27,6 +27,7 @@ partial class WebsiteSettingsForm
         this.RightToLeft = RightToLeft.Yes;
         this.RightToLeftLayout = true;
         this.Font = new Font("Tahoma", 9F, FontStyle.Regular);
+        this.AutoScaleMode = AutoScaleMode.Font;
 
         // Website URL
         var lblWebsiteUrl = new Label();
@@ -40,25 +41,26 @@ partial class WebsiteSettingsForm
         txtWebsiteUrl.Size = new Size(680, 25);
         txtWebsiteUrl.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 
-        // TabControl
-        var tabControl = new TabControl();
-        tabControl.Location = new Point(30, 80);
-        tabControl.Size = new Size(940, 580);
-        tabControl.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
+        // Form Fields Section
+        var lblFormFields = new Label();
+        lblFormFields.Text = "فیلدهای فرم:";
+        lblFormFields.AutoSize = true;
+        lblFormFields.Location = new Point(850, 80);
+        lblFormFields.Size = new Size(100, 20);
+        lblFormFields.Font = new Font("Tahoma", 9F, FontStyle.Bold);
 
-        // Form Fields Tab
-        var formFieldsTab = new TabPage("فیلدهای فرم");
-        
         // Fields DataGridView
         fieldsDataGridView = new DataGridView();
-        fieldsDataGridView.Location = new Point(20, 20);
-        fieldsDataGridView.Size = new Size(890, 480);
+        fieldsDataGridView.Location = new Point(30, 110);
+        fieldsDataGridView.Size = new Size(940, 200);
         fieldsDataGridView.AutoGenerateColumns = false;
         fieldsDataGridView.AllowUserToAddRows = true;
         fieldsDataGridView.AllowUserToDeleteRows = true;
-        fieldsDataGridView.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
         fieldsDataGridView.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
         fieldsDataGridView.MultiSelect = false;
+        fieldsDataGridView.Font = new Font("Tahoma", 9F, FontStyle.Regular);
+        fieldsDataGridView.BackgroundColor = SystemColors.Window;
+        fieldsDataGridView.BorderStyle = BorderStyle.Fixed3D;
 
         // Add columns to Fields DataGridView
         fieldsDataGridView.Columns.AddRange(new DataGridViewColumn[]
@@ -67,14 +69,14 @@ partial class WebsiteSettingsForm
             { 
                 DataPropertyName = "Name",
                 HeaderText = "نام فیلد",
-                Width = 440,
+                Width = 470,
                 MinimumWidth = 200
             },
             new DataGridViewTextBoxColumn 
             { 
                 DataPropertyName = "Value",
                 HeaderText = "مقدار فیلد",
-                Width = 430,
+                Width = 450,
                 MinimumWidth = 200
             }
         });
@@ -82,32 +84,37 @@ partial class WebsiteSettingsForm
         // Add Field Button
         btnAddField = new Button();
         btnAddField.Text = "اضافه کردن فیلد جدید";
-        btnAddField.Location = new Point(760, 520);
+        btnAddField.Location = new Point(820, 320);
         btnAddField.Size = new Size(150, 35);
         btnAddField.Click += btnAddField_Click;
 
         // Remove Field Button
         btnRemoveField = new Button();
         btnRemoveField.Text = "حذف فیلد انتخاب شده";
-        btnRemoveField.Location = new Point(590, 520);
+        btnRemoveField.Location = new Point(650, 320);
         btnRemoveField.Size = new Size(150, 35);
         btnRemoveField.Click += btnRemoveField_Click;
 
-        formFieldsTab.Controls.AddRange(new Control[] { fieldsDataGridView, btnAddField, btnRemoveField });
-
-        // URL Monitoring Tab
-        var urlMonitoringTab = new TabPage("نظارت بر URL");
+        // URL Monitoring Section
+        var lblUrlMonitoring = new Label();
+        lblUrlMonitoring.Text = "نظارت بر URL:";
+        lblUrlMonitoring.AutoSize = true;
+        lblUrlMonitoring.Location = new Point(850, 380);
+        lblUrlMonitoring.Size = new Size(100, 20);
+        lblUrlMonitoring.Font = new Font("Tahoma", 9F, FontStyle.Bold);
 
         // URL Monitoring DataGridView
         urlMonitoringDataGridView = new DataGridView();
-        urlMonitoringDataGridView.Location = new Point(20, 20);
-        urlMonitoringDataGridView.Size = new Size(890, 480);
+        urlMonitoringDataGridView.Location = new Point(30, 410);
+        urlMonitoringDataGridView.Size = new Size(940, 200);
         urlMonitoringDataGridView.AutoGenerateColumns = false;
         urlMonitoringDataGridView.AllowUserToAddRows = false;
         urlMonitoringDataGridView.AllowUserToDeleteRows = false;
-        urlMonitoringDataGridView.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right | AnchorStyles.Bottom;
         urlMonitoringDataGridView.SelectionMode = DataGridViewSelectionMode.FullRowSelect;
         urlMonitoringDataGridView.MultiSelect = false;
+        urlMonitoringDataGridView.Font = new Font("Tahoma", 9F, FontStyle.Regular);
+        urlMonitoringDataGridView.BackgroundColor = SystemColors.Window;
+        urlMonitoringDataGridView.BorderStyle = BorderStyle.Fixed3D;
 
         // Add columns to URL Monitoring DataGridView
         urlMonitoringDataGridView.Columns.AddRange(new DataGridViewColumn[]
@@ -143,33 +150,23 @@ partial class WebsiteSettingsForm
         // Add URL Monitoring Button
         btnAddUrlMonitoring = new Button();
         btnAddUrlMonitoring.Text = "اضافه کردن نظارت جدید";
-        btnAddUrlMonitoring.Location = new Point(760, 520);
+        btnAddUrlMonitoring.Location = new Point(820, 620);
         btnAddUrlMonitoring.Size = new Size(150, 35);
         btnAddUrlMonitoring.Click += btnAddUrlMonitoring_Click;
 
         // Remove URL Monitoring Button
         btnRemoveUrlMonitoring = new Button();
         btnRemoveUrlMonitoring.Text = "حذف نظارت انتخاب شده";
-        btnRemoveUrlMonitoring.Location = new Point(590, 520);
+        btnRemoveUrlMonitoring.Location = new Point(650, 620);
         btnRemoveUrlMonitoring.Size = new Size(150, 35);
         btnRemoveUrlMonitoring.Click += btnRemoveUrlMonitoring_Click;
 
         // Configure URL Monitoring Button
         btnConfigureUrlMonitoring = new Button();
         btnConfigureUrlMonitoring.Text = "تنظیم پارامترها";
-        btnConfigureUrlMonitoring.Location = new Point(420, 520);
+        btnConfigureUrlMonitoring.Location = new Point(480, 620);
         btnConfigureUrlMonitoring.Size = new Size(150, 35);
         btnConfigureUrlMonitoring.Click += btnConfigureUrlMonitoring_Click;
-
-        urlMonitoringTab.Controls.AddRange(new Control[] { 
-            urlMonitoringDataGridView, 
-            btnAddUrlMonitoring, 
-            btnRemoveUrlMonitoring, 
-            btnConfigureUrlMonitoring 
-        });
-
-        // Add tabs to TabControl
-        tabControl.TabPages.AddRange(new TabPage[] { formFieldsTab, urlMonitoringTab });
 
         // Save Button
         btnSave = new Button();
@@ -190,7 +187,15 @@ partial class WebsiteSettingsForm
         {
             lblWebsiteUrl,
             txtWebsiteUrl,
-            tabControl,
+            lblFormFields,
+            fieldsDataGridView,
+            btnAddField,
+            btnRemoveField,
+            lblUrlMonitoring,
+            urlMonitoringDataGridView,
+            btnAddUrlMonitoring,
+            btnRemoveUrlMonitoring,
+            btnConfigureUrlMonitoring,
             btnSave,
             btnCancel
         });

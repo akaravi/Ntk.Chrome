@@ -154,18 +154,28 @@ public class NetworkService : INetworkService
     {
         try
         {
+            // بررسی صحت پارامترها
+            if (e?.Request == null || string.IsNullOrEmpty(e.Request.Url))
+            {
+                _logger.Warning("درخواست نامعتبر دریافت شد");
+                return;
+            }
+
             // ایجاد رکورد درخواست جدید
             var request = new RequestInfo
             {
                 Url = e.Request.Url,
-                Method = e.Request.Method,
+                Method = e.Request.Method ?? string.Empty,
                 RequestHeaders = FormatHeaders(e.Request.Headers),
                 RequestBody = e.Request.PostData ?? string.Empty,
                 Timestamp = DateTime.Now
             };
 
-            // اضافه کردن به لیست
-            _requests.Add(request);
+            // اضافه کردن به لیست با thread safety
+            lock (_requests)
+            {
+                _requests.Add(request);
+            }
             
             // اطلاع‌رسانی به UI
             RequestAdded?.Invoke(this, request);
@@ -192,14 +202,26 @@ public class NetworkService : INetworkService
         {
             try
             {
-                // پیدا کردن درخواست مربوطه
-                var request = _requests.FirstOrDefault(r => r.Url == e.Response.Url);
+                // بررسی صحت پارامترها
+                if (e?.Response == null || string.IsNullOrEmpty(e.Response.Url))
+                {
+                    _logger.Warning("پاسخ نامعتبر دریافت شد");
+                    return;
+                }
+
+                // پیدا کردن درخواست مربوطه با بررسی thread safety
+                RequestInfo? request = null;
+                lock (_requests)
+                {
+                    request = _requests.FirstOrDefault(r => !string.IsNullOrEmpty(r.Url) && r.Url.Equals(e.Response.Url, StringComparison.OrdinalIgnoreCase));
+                }
+
                 if (request != null)
                 {
                     // به‌روزرسانی اطلاعات پاسخ
                     request.ResponseHeaders = FormatResponseHeaders(e.Response.Headers);
                     request.StatusCode = (int)e.Response.Status;
-                    request.ContentType = e.Response.MimeType;
+                    request.ContentType = e.Response.MimeType ?? string.Empty;
                     
                     // اطلاع‌رسانی اولیه به UI
                     RequestUpdated?.Invoke(this, request);
@@ -207,21 +229,32 @@ public class NetworkService : INetworkService
                     // دریافت Response Body با تاخیر
                     _ = Task.Run(async () =>
                     {
-                        await Task.Delay(100); // تاخیر کوتاه برای اطمینان از تکمیل پاسخ
-                        await GetResponseBodyAsync(request, e.RequestId);
-                        
-                    // اطلاع‌رسانی مجدد به UI پس از دریافت Response Body
-                    RequestUpdated?.Invoke(this, request);
+                        try
+                        {
+                            await Task.Delay(100); // تاخیر کوتاه برای اطمینان از تکمیل پاسخ
+                            await GetResponseBodyAsync(request, e.RequestId);
+                            
+                            // اطلاع‌رسانی مجدد به UI پس از دریافت Response Body
+                            RequestUpdated?.Invoke(this, request);
+                            
+                            // بررسی نظارت بر URL
+                            await CheckUrlMonitoringAsync(request);
+                        }
+                        catch (Exception innerEx)
+                        {
+                            _logger.Error(innerEx, "خطا در پردازش Response Body");
+                        }
+                    });
                     
-                    // بررسی نظارت بر URL
-                    await CheckUrlMonitoringAsync(request);
-                });
-                
-                // فقط پاسخ صفحات اصلی را در لاگ نمایش دهید
-                if (IsMainPageRequest(e.Response.Url))
-                {
-                    _logger.Information($"پاسخ دریافت شد: {request.StatusCode} {request.Url}");
+                    // فقط پاسخ صفحات اصلی را در لاگ نمایش دهید
+                    if (IsMainPageRequest(e.Response.Url))
+                    {
+                        _logger.Information($"پاسخ دریافت شد: {request.StatusCode} {request.Url}");
+                    }
                 }
+                else
+                {
+                    _logger.Debug($"درخواست مربوط به URL {e.Response.Url} یافت نشد");
                 }
             }
             catch (Exception ex)
