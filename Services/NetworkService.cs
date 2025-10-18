@@ -165,7 +165,7 @@ public class NetworkService : INetworkService
             // فقط آدرس صفحات اصلی را در لاگ نمایش دهید
             if (IsMainPageRequest(e.Request.Url))
             {
-                _logger.Information($"صفحه بارگذاری شد: {e.Request.Url}");
+                //_logger.Information($"صفحه بارگذاری شد: {e.Request.Url}");
             }
         }
         catch (Exception ex)
@@ -178,43 +178,46 @@ public class NetworkService : INetworkService
     /// مدیریت رویداد دریافت پاسخ
     /// </summary>
     /// <param name="e">اطلاعات رویداد پاسخ</param>
-    private async Task HandleResponseReceived(ResponseReceivedEventArgs e)
+    private Task HandleResponseReceived(ResponseReceivedEventArgs e)
     {
-        try
+        return Task.Run(() =>
         {
-            // پیدا کردن درخواست مربوطه
-            var request = _requests.FirstOrDefault(r => r.Url == e.Response.Url);
-            if (request != null)
+            try
             {
-                // به‌روزرسانی اطلاعات پاسخ
-                request.ResponseHeaders = FormatResponseHeaders(e.Response.Headers);
-                request.StatusCode = (int)e.Response.Status;
-                request.ContentType = e.Response.MimeType;
-                
-                // اطلاع‌رسانی اولیه به UI
-                RequestUpdated?.Invoke(this, request);
-                
-                // دریافت Response Body با تاخیر
-                _ = Task.Run(async () =>
+                // پیدا کردن درخواست مربوطه
+                var request = _requests.FirstOrDefault(r => r.Url == e.Response.Url);
+                if (request != null)
                 {
-                    await Task.Delay(100); // تاخیر کوتاه برای اطمینان از تکمیل پاسخ
-                    await GetResponseBodyAsync(request, e.RequestId);
+                    // به‌روزرسانی اطلاعات پاسخ
+                    request.ResponseHeaders = FormatResponseHeaders(e.Response.Headers);
+                    request.StatusCode = (int)e.Response.Status;
+                    request.ContentType = e.Response.MimeType;
                     
-                    // اطلاع‌رسانی مجدد به UI پس از دریافت Response Body
+                    // اطلاع‌رسانی اولیه به UI
                     RequestUpdated?.Invoke(this, request);
-                });
-                
-                // فقط پاسخ صفحات اصلی را در لاگ نمایش دهید
-                if (IsMainPageRequest(e.Response.Url))
-                {
-                    _logger.Information($"پاسخ دریافت شد: {request.StatusCode} {request.Url}");
+                    
+                    // دریافت Response Body با تاخیر
+                    _ = Task.Run(async () =>
+                    {
+                        await Task.Delay(100); // تاخیر کوتاه برای اطمینان از تکمیل پاسخ
+                        await GetResponseBodyAsync(request, e.RequestId);
+                        
+                        // اطلاع‌رسانی مجدد به UI پس از دریافت Response Body
+                        RequestUpdated?.Invoke(this, request);
+                    });
+                    
+                    // فقط پاسخ صفحات اصلی را در لاگ نمایش دهید
+                    if (IsMainPageRequest(e.Response.Url))
+                    {
+                        _logger.Information($"پاسخ دریافت شد: {request.StatusCode} {request.Url}");
+                    }
                 }
             }
-        }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, "خطا در پردازش پاسخ");
-        }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "خطا در پردازش پاسخ");
+            }
+        });
     }
 
     /// <summary>
@@ -244,11 +247,11 @@ public class NetworkService : INetworkService
                         if (responseBody != null && !string.IsNullOrEmpty(responseBody.Body))
                         {
                             request.ResponseBody = responseBody.Body;
-                            _logger.Debug($"Response Body دریافت شد برای: {request.Url}");
+                            //_logger.Debug($"Response Body دریافت شد برای: {request.Url}");
                         }
                         else
                         {
-                            _logger.Debug($"Response Body خالی است برای: {request.Url}");
+                            //_logger.Debug($"Response Body خالی است برای: {request.Url}");
                         }
                     }
                 }

@@ -127,6 +127,9 @@ public partial class MainForm : Form
             // راه‌اندازی سرویس ChromeDriver
             await _chromeDriverService.InitializeAsync();
             
+            // بررسی و نمایش نسخه‌های فعلی
+            await CheckAndDisplayVersionsAsync();
+            
             // بررسی وجود فایل تنظیمات و نمایش فرم تنظیمات در صورت عدم وجود
             if (!File.Exists("settings.json"))
             {
@@ -238,16 +241,20 @@ public partial class MainForm : Form
     /// </summary>
     /// <param name="sender">فرستنده رویداد</param>
     /// <param name="e">اطلاعات رویداد</param>
-    private void btnStop_Click(object sender, EventArgs e)
+    private async void btnStop_Click(object sender, EventArgs e)
     {
         try
         {
-            // توقف ChromeDriver
-            _chromeDriverService.StopDriver();
+            // غیرفعال کردن دکمه‌ها برای جلوگیری از کلیک مجدد
+            btnStart.Enabled = false;
+            btnStop.Enabled = false;
+            
+            // توقف ChromeDriver به صورت async
+            await Task.Run(() => _chromeDriverService.StopDriver());
             _driver = null;
             
             // پاک کردن لیست درخواست‌ها
-            _networkService.ClearRequests();
+            await Task.Run(() => _networkService.ClearRequests());
             _requests.Clear();
             
             // تنظیم وضعیت دکمه‌ها
@@ -259,6 +266,9 @@ public partial class MainForm : Form
         catch (Exception ex)
         {
             _logger.Error(ex, "خطا در توقف برنامه");
+            // در صورت خطا، دکمه‌ها را فعال کن
+            btnStart.Enabled = true;
+            btnStop.Enabled = true;
         }
     }
 
@@ -268,11 +278,33 @@ public partial class MainForm : Form
     /// </summary>
     /// <param name="sender">فرستنده رویداد</param>
     /// <param name="e">اطلاعات رویداد</param>
-    private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+    private async void MainForm_FormClosing(object sender, FormClosingEventArgs e)
     {
-        // بستن و آزاد کردن منابع ChromeDriver
-        _driver?.Quit();
-        _driver?.Dispose();
+        try
+        {
+            // بستن و آزاد کردن منابع ChromeDriver به صورت async
+            if (_driver != null)
+            {
+                await Task.Run(() => 
+                {
+                    try
+                    {
+                        _driver.Quit();
+                    }
+                    catch { }
+                    try
+                    {
+                        _driver.Dispose();
+                    }
+                    catch { }
+                });
+                _driver = null;
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger?.Error(ex, "خطا در بستن ChromeDriver");
+        }
     }
     
     #endregion
@@ -355,12 +387,31 @@ public partial class MainForm : Form
     /// </summary>
     /// <param name="sender">فرستنده رویداد</param>
     /// <param name="e">اطلاعات رویداد</param>
-    private void requestsDataGridView_SelectionChanged(object sender, EventArgs e)
+    private async void requestsDataGridView_SelectionChanged(object sender, EventArgs e)
     {
         if (requestsDataGridView.SelectedRows.Count > 0)
         {
             var request = (RequestInfo)requestsDataGridView.SelectedRows[0].DataBoundItem;
-            UpdateRequestDetails(request);
+            await UpdateRequestDetailsAsync(request);
+        }
+    }
+
+    /// <summary>
+    /// رویداد تغییر انتخاب رادیو باتن‌ها
+    /// به‌روزرسانی نمایش جزئیات درخواست با فرمت جدید
+    /// </summary>
+    /// <param name="sender">فرستنده رویداد</param>
+    /// <param name="e">اطلاعات رویداد</param>
+    private async void RadioButton_CheckedChanged(object sender, EventArgs e)
+    {
+        // فقط در صورت انتخاب شدن رادیو باتن، نمایش را به‌روزرسانی کن
+        if (sender is RadioButton radioButton && radioButton.Checked)
+        {
+            var selectedRequest = GetSelectedRequest();
+            if (selectedRequest != null)
+            {
+                await UpdateRequestDetailsAsync(selectedRequest);
+            }
         }
     }
 
@@ -369,7 +420,7 @@ public partial class MainForm : Form
     /// نمایش اطلاعات کامل درخواست و پاسخ در فرمت‌های مختلف
     /// </summary>
     /// <param name="request">درخواست برای نمایش جزئیات</param>
-    private void UpdateRequestDetails(RequestInfo? request)
+    private async Task UpdateRequestDetailsAsync(RequestInfo? request)
     {
         // بررسی وجود درخواست
         if (request == null)
@@ -378,66 +429,224 @@ public partial class MainForm : Form
             return;
         }
 
-        // نمایش در فرمت متنی
-        if (radioButtonText.Checked)
+        // انجام عملیات به صورت async برای جلوگیری از هنگ UI
+        await Task.Run(() =>
         {
-            var details = new StringBuilder();
-            
-            // بخش درخواست
-            details.AppendLine($"=== REQUEST ===");
-            details.AppendLine($"URL: {request.Url}");
-            details.AppendLine($"Method: {request.Method}");
-            details.AppendLine($"Timestamp: {request.Timestamp:yyyy-MM-dd HH:mm:ss}");
-            details.AppendLine($"Request Headers:");
-            details.AppendLine(request.RequestHeaders ?? "-");
-            if (!string.IsNullOrEmpty(request.RequestBody))
+            // نمایش در فرمت متنی
+            if (radioButtonText.Checked)
             {
-                details.AppendLine($"Request Body:");
-                details.AppendLine(request.RequestBody);
+                var details = new StringBuilder();
+                
+                // بخش درخواست
+                details.AppendLine($"=== REQUEST ===");
+                details.AppendLine($"URL: {request.Url}");
+                details.AppendLine($"Method: {request.Method}");
+                details.AppendLine($"Timestamp: {request.Timestamp:yyyy-MM-dd HH:mm:ss}");
+                details.AppendLine($"Request Headers:");
+                details.AppendLine(request.RequestHeaders ?? "-");
+                if (!string.IsNullOrEmpty(request.RequestBody))
+                {
+                    details.AppendLine($"Request Body:");
+                    details.AppendLine(request.RequestBody);
+                }
+                
+                // بخش پاسخ
+                details.AppendLine($"\n=== RESPONSE ===");
+                details.AppendLine($"Status: {request.StatusCode}");
+                details.AppendLine($"Content-Type: {request.ContentType}");
+                details.AppendLine($"Response Headers:");
+                details.AppendLine(request.ResponseHeaders ?? "-");
+                if (!string.IsNullOrEmpty(request.ResponseBody))
+                {
+                    details.AppendLine($"Response Body:");
+                    details.AppendLine(request.ResponseBody);
+                }
+                
+                // به‌روزرسانی UI در thread اصلی
+                Invoke(new Action(() => requestDetailsTextBox.Text = details.ToString()));
+            }
+            // نمایش در فرمت JSON - با بررسی اعتبار
+            else if (radioButtonJson.Checked)
+            {
+                try
+                {
+                    // بررسی اینکه آیا محتوا قابل تبدیل به JSON است یا نه
+                    if (IsValidJsonContent(request))
+                    {
+                        var json = JsonConvert.SerializeObject(new
+                        {
+                            request.Url,
+                            request.Method,
+                            request.StatusCode,
+                            request.ContentType,
+                            request.Timestamp,
+                            RequestHeaders = request.RequestHeaders,
+                            RequestBody = request.RequestBody,
+                            ResponseHeaders = request.ResponseHeaders,
+                            ResponseBody = request.ResponseBody
+                        }, Formatting.Indented);
+                        
+                        Invoke(new Action(() => requestDetailsTextBox.Text = json));
+                    }
+                    else
+                    {
+                        // اگر محتوا JSON معتبر نیست، به حالت متنی برگرد
+                        Invoke(new Action(() => 
+                        {
+                            radioButtonText.Checked = true;
+                            radioButtonJson.Checked = false;
+                            _logger.Warning("محتوا برای نمایش JSON مناسب نیست، به حالت متنی تغییر کرد");
+                        }));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Invoke(new Action(() => 
+                    {
+                        radioButtonText.Checked = true;
+                        radioButtonJson.Checked = false;
+                        requestDetailsTextBox.Text = "خطا در فرمت JSON - به حالت متنی تغییر کرد";
+                        _logger.Error(ex, "خطا در فرمت JSON");
+                    }));
+                }
+            }
+            // نمایش در فرمت HTML - با بررسی اعتبار
+            else if (radioButtonHtml.Checked)
+            {
+                try
+                {
+                    // بررسی اینکه آیا محتوا HTML معتبر است یا نه
+                    if (IsValidHtmlContent(request))
+                    {
+                        Invoke(new Action(() => requestDetailsTextBox.Text = request.ResponseBody ?? string.Empty));
+                    }
+                    else
+                    {
+                        // اگر محتوا HTML معتبر نیست، به حالت متنی برگرد
+                        Invoke(new Action(() => 
+                        {
+                            radioButtonText.Checked = true;
+                            radioButtonHtml.Checked = false;
+                            _logger.Warning("محتوا برای نمایش HTML مناسب نیست، به حالت متنی تغییر کرد");
+                        }));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Invoke(new Action(() => 
+                    {
+                        radioButtonText.Checked = true;
+                        radioButtonHtml.Checked = false;
+                        requestDetailsTextBox.Text = "خطا در فرمت HTML - به حالت متنی تغییر کرد";
+                        _logger.Error(ex, "خطا در فرمت HTML");
+                    }));
+                }
+            }
+        });
+    }
+    
+    /// <summary>
+    /// بررسی اعتبار محتوا برای نمایش JSON
+    /// </summary>
+    /// <param name="request">درخواست برای بررسی</param>
+    /// <returns>true اگر محتوا برای JSON مناسب است</returns>
+    private bool IsValidJsonContent(RequestInfo request)
+    {
+        try
+        {
+            // بررسی Content-Type
+            if (!string.IsNullOrEmpty(request.ContentType) && 
+                (request.ContentType.Contains("application/json") || 
+                 request.ContentType.Contains("text/json")))
+            {
+                return true;
             }
             
-            // بخش پاسخ
-            details.AppendLine($"\n=== RESPONSE ===");
-            details.AppendLine($"Status: {request.StatusCode}");
-            details.AppendLine($"Content-Type: {request.ContentType}");
-            details.AppendLine($"Response Headers:");
-            details.AppendLine(request.ResponseHeaders ?? "-");
+            // بررسی ResponseBody
             if (!string.IsNullOrEmpty(request.ResponseBody))
             {
-                details.AppendLine($"Response Body:");
-                details.AppendLine(request.ResponseBody);
+                // تلاش برای پارس کردن JSON
+                JsonConvert.DeserializeObject(request.ResponseBody);
+                return true;
             }
             
-            requestDetailsTextBox.Text = details.ToString();
+            return false;
         }
-        // نمایش در فرمت JSON
-        else if (radioButtonJson.Checked)
+        catch
         {
-            try
+            return false;
+        }
+    }
+    
+    /// <summary>
+    /// بررسی اعتبار محتوا برای نمایش HTML
+    /// </summary>
+    /// <param name="request">درخواست برای بررسی</param>
+    /// <returns>true اگر محتوا برای HTML مناسب است</returns>
+    private bool IsValidHtmlContent(RequestInfo request)
+    {
+        try
+        {
+            // بررسی Content-Type
+            if (!string.IsNullOrEmpty(request.ContentType) && 
+                (request.ContentType.Contains("text/html") || 
+                 request.ContentType.Contains("application/xhtml")))
             {
-                var json = JsonConvert.SerializeObject(new
+                return true;
+            }
+            
+            // بررسی ResponseBody برای تگ‌های HTML
+            if (!string.IsNullOrEmpty(request.ResponseBody))
+            {
+                var body = request.ResponseBody.Trim();
+                if (body.StartsWith("<") && body.Contains("</") && 
+                    (body.Contains("<html") || body.Contains("<div") || body.Contains("<p")))
                 {
-                    request.Url,
-                    request.Method,
-                    request.StatusCode,
-                    request.ContentType,
-                    request.Timestamp,
-                    RequestHeaders = request.RequestHeaders,
-                    RequestBody = request.RequestBody,
-                    ResponseHeaders = request.ResponseHeaders,
-                    ResponseBody = request.ResponseBody
-                }, Formatting.Indented);
-                requestDetailsTextBox.Text = json;
+                    return true;
+                }
             }
-            catch
-            {
-                requestDetailsTextBox.Text = "Error formatting as JSON";
-            }
+            
+            return false;
         }
-        // نمایش در فرمت HTML
-        else // HTML
+        catch
         {
-            requestDetailsTextBox.Text = request.ResponseBody ?? string.Empty;
+            return false;
+        }
+    }
+    
+    /// <summary>
+    /// بررسی و نمایش نسخه‌های فعلی ChromeDriver و Chromium
+    /// </summary>
+    private async Task CheckAndDisplayVersionsAsync()
+    {
+        try
+        {
+            var settings = File.Exists("settings.json") 
+                ? JsonConvert.DeserializeObject<AppSettings>(File.ReadAllText("settings.json")) 
+                ?? new AppSettings()
+                : new AppSettings();
+
+            var driverPath = Environment.ExpandEnvironmentVariables(settings.ChromeDriverPath ?? "ChromeDriver");
+            if (!Path.IsPathRooted(driverPath))
+            {
+                driverPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, driverPath);
+            }
+
+            var versionManager = new VersionManager(driverPath, _logger);
+            var currentVersions = await versionManager.ReadCurrentVersionsAsync();
+            
+            var versionInfo = new StringBuilder();
+            versionInfo.AppendLine("=== اطلاعات نسخه‌ها ===");
+            versionInfo.AppendLine($"Chromium فعلی: {currentVersions.ChromiumVersion ?? "نامشخص"}");
+            versionInfo.AppendLine($"ChromeDriver فعلی: {currentVersions.ChromeDriverVersion ?? "نامشخص"}");
+            versionInfo.AppendLine($"Chromium مورد انتظار: {settings.ChromiumVersion}");
+            versionInfo.AppendLine($"ChromeDriver مورد انتظار: {settings.ChromeDriverVersion}");
+            
+            _logger.Information(versionInfo.ToString());
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "خطا در بررسی نسخه‌ها");
         }
     }
     

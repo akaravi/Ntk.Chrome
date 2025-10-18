@@ -231,56 +231,47 @@ partial class MainForm
         // Radio Buttons for display format
         var formatPanel = new Panel();
         formatPanel.Dock = DockStyle.Top;
-        formatPanel.Height = 40;
-        formatPanel.Padding = new Padding(10, 5, 10, 5);
+        formatPanel.Height = 50;
+        formatPanel.Padding = new Padding(10, 10, 10, 10);
         formatPanel.BackColor = Color.White;
+        formatPanel.BorderStyle = BorderStyle.FixedSingle;
 
         var lblDisplayFormat = new Label();
-        lblDisplayFormat.Text = "اطلاعات صفحات فراخوانی";
+        lblDisplayFormat.Text = "فرمت نمایش:";
         lblDisplayFormat.AutoSize = true;
-        lblDisplayFormat.Font = new Font("Tahoma", 11F, FontStyle.Regular);
-        lblDisplayFormat.Dock = DockStyle.Right;
+        lblDisplayFormat.Font = new Font("Tahoma", 11F, FontStyle.Bold);
+        lblDisplayFormat.Location = new Point(10, 15);
         lblDisplayFormat.ForeColor = Color.FromArgb(64, 64, 64);
 
-        var radioPanel = new FlowLayoutPanel();
-        radioPanel.FlowDirection = FlowDirection.RightToLeft;
-        radioPanel.Dock = DockStyle.Left;
-        radioPanel.AutoSize = true;
-        radioPanel.Padding = new Padding(5);
-
+        // ایجاد رادیو باتن‌ها
         radioButtonText = new RadioButton();
         radioButtonText.Text = "Text";
         radioButtonText.Checked = true;
         radioButtonText.Font = new Font("Tahoma", 10F);
         radioButtonText.AutoSize = true;
-        radioButtonText.Margin = new Padding(5, 0, 5, 0);
-        radioButtonText.CheckedChanged += (s, e) => UpdateRequestDetails(GetSelectedRequest());
+        radioButtonText.Location = new Point(150, 15);
+        radioButtonText.CheckedChanged += RadioButton_CheckedChanged;
 
         radioButtonJson = new RadioButton();
-        radioButtonJson.Text = "Json";
+        radioButtonJson.Text = "JSON";
         radioButtonJson.Font = new Font("Tahoma", 10F);
         radioButtonJson.AutoSize = true;
-        radioButtonJson.Margin = new Padding(5, 0, 5, 0);
-        radioButtonJson.CheckedChanged += (s, e) => UpdateRequestDetails(GetSelectedRequest());
+        radioButtonJson.Location = new Point(220, 15);
+        radioButtonJson.CheckedChanged += RadioButton_CheckedChanged;
 
         radioButtonHtml = new RadioButton();
-        radioButtonHtml.Text = "Html";
+        radioButtonHtml.Text = "HTML";
         radioButtonHtml.Font = new Font("Tahoma", 10F);
         radioButtonHtml.AutoSize = true;
-        radioButtonHtml.Margin = new Padding(5, 0, 5, 0);
-        radioButtonHtml.CheckedChanged += (s, e) => UpdateRequestDetails(GetSelectedRequest());
-
-        radioPanel.Controls.AddRange(new Control[] 
-        { 
-            radioButtonText, 
-            radioButtonJson, 
-            radioButtonHtml 
-        });
+        radioButtonHtml.Location = new Point(300, 15);
+        radioButtonHtml.CheckedChanged += RadioButton_CheckedChanged;
 
         formatPanel.Controls.AddRange(new Control[]
         {
             lblDisplayFormat,
-            radioPanel
+            radioButtonText,
+            radioButtonJson,
+            radioButtonHtml
         });
 
         // Request Details TextBox

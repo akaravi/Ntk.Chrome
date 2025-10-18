@@ -12,14 +12,15 @@ namespace Ntk.Chrome.Services;
 public class CustomChromeDriverService : IChromeDriverService
 {
     private readonly string _driverPath;
-    private readonly ILogger interydata;
+    private readonly ILogger _logger;
+    private readonly VersionManager _versionManager;
     private const string CHROME_DRIVER_URL = "https://storage.googleapis.com/chrome-for-testing-public/";
     private const string CHROMIUM_URL = "https://storage.googleapis.com/chrome-for-testing-public/{0}/win64/chrome-win64.zip";
     private ChromeDriver? _driver;
-        private readonly string _chromiumVersion;
-        private readonly string _chromeDriverVersion;
+    private readonly string _chromiumVersion;
+    private readonly string _chromeDriverVersion;
 
-    public CustomChromeDriverService(string driverPath, ILogger interydata)
+    public CustomChromeDriverService(string driverPath, ILogger log)
     {
         var settings = File.Exists("settings.json") 
             ? JsonConvert.DeserializeObject<AppSettings>(File.ReadAllText("settings.json")) 
@@ -31,61 +32,57 @@ public class CustomChromeDriverService : IChromeDriverService
         _driverPath = Path.IsPathRooted(expandedPath) 
             ? expandedPath 
             : Path.Combine(AppDomain.CurrentDomain.BaseDirectory, expandedPath);
-        this.interydata = interydata;
+        this._logger = log;
         _chromiumVersion = settings.ChromiumVersion;
         _chromeDriverVersion = settings.ChromeDriverVersion;
+        
+        // Initialize VersionManager
+        _versionManager = new VersionManager(_driverPath, _logger);
     }
 
     public async Task InitializeAsync()
     {
         try
         {
-            // بررسی وجود Chromium
-            var chromiumPath = Path.Combine(_driverPath, "chromium", "chrome-win", "chrome.exe");
-            var driverPath = Path.Combine(_driverPath, "driver", "chromedriver.exe");
-            var shouldDownload = false;
-
+            // مرحله 1: بررسی فایل‌های ورژن
+            var currentVersions = await _versionManager.ReadCurrentVersionsAsync();
+            
+            // مسیرهای فایل‌های اجرایی
+            var chromiumPath = Path.Combine(_driverPath, "chromium", "chrome-win64", "chrome.exe");
             if (!File.Exists(chromiumPath))
+                chromiumPath = Path.Combine(_driverPath, "chromium", "chrome-win", "chrome.exe");
+                
+            var driverPath = Path.Combine(_driverPath, "driver", "chromedriver.exe");
+            var shouldReplaceFiles = false;
+
+            // مرحله 2: بررسی منطق ورژن‌ها
+            var chromiumVersionCheck = await CheckChromiumVersionAsync(chromiumPath, currentVersions.ChromiumVersion);
+            var driverVersionCheck = await CheckChromeDriverVersionAsync(driverPath, currentVersions.ChromeDriverVersion);
+
+            if (chromiumVersionCheck.NeedsReplacement || driverVersionCheck.NeedsReplacement)
             {
-                interydata.Information($"Chromium در مسیر {chromiumPath} یافت نشد");
-                shouldDownload = true;
-            }
-            else
-            {
-                interydata.Information($"Chromium در مسیر {chromiumPath} یافت شد");
-                var fileVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(chromiumPath).FileVersion;
-                if (fileVersion != _chromiumVersion)
-                {
-                    interydata.Information($"نسخه Chromium ({fileVersion}) با نسخه مورد نظر ({_chromiumVersion}) متفاوت است");
-                    shouldDownload = true;
-                }
+                shouldReplaceFiles = true;
+                _logger.Information("نیاز به جایگزینی فایل‌ها تشخیص داده شد");
             }
 
-            if (!File.Exists(driverPath))
+            if (shouldReplaceFiles)
             {
-                interydata.Information($"ChromeDriver در مسیر {driverPath} یافت نشد");
-                shouldDownload = true;
-            }
-            else
-            {
-                interydata.Information($"ChromeDriver در مسیر {driverPath} یافت شد");
-            }
-
-            if (shouldDownload)
-            {
-                interydata.Information("شروع دانلود و نصب Chromium و ChromeDriver...");
+                _logger.Information("شروع جایگزینی فایل‌ها و به‌روزرسانی ورژن‌ها...");
                 
                 // تلاش برای دانلود با مدیریت خطا
                 try
                 {
                     await DownloadChromiumAsync();
                     await DownloadChromeDriverAsync();
-                    interydata.Information("دانلود و نصب با موفقیت انجام شد");
+                    
+                    // به‌روزرسانی فایل‌های ورژن پس از جایگزینی
+                    await _versionManager.WriteVersionsAsync(_chromiumVersion, _chromeDriverVersion);
+                    _logger.Information("جایگزینی فایل‌ها و به‌روزرسانی ورژن‌ها با موفقیت انجام شد");
                 }
                 catch (Exception downloadEx)
                 {
-                    interydata.Warning($"خطا در دانلود: {downloadEx.Message}");
-                    interydata.Information("تلاش برای استفاده از فایل‌های موجود...");
+                    _logger.Warning($"خطا در دانلود: {downloadEx.Message}");
+                    _logger.Information("تلاش برای استفاده از فایل‌های موجود...");
                     
                     // بررسی وجود فایل‌های آرشیو
                     var chromiumArchive = Path.Combine(_driverPath, "chromium", "archive", $"chromium-{_chromiumVersion}.zip");
@@ -93,15 +90,18 @@ public class CustomChromeDriverService : IChromeDriverService
                     
                     if (File.Exists(chromiumArchive))
                     {
-                        interydata.Information("استفاده از فایل آرشیو Chromium...");
+                        _logger.Information("استفاده از فایل آرشیو Chromium...");
                         await ExtractFromArchiveAsync(chromiumArchive, Path.Combine(_driverPath, "chromium"));
                     }
                     
                     if (File.Exists(driverArchive))
                     {
-                        interydata.Information("استفاده از فایل آرشیو ChromeDriver...");
+                        _logger.Information("استفاده از فایل آرشیو ChromeDriver...");
                         await ExtractFromArchiveAsync(driverArchive, Path.Combine(_driverPath, "driver"));
                     }
+                    
+                    // به‌روزرسانی فایل‌های ورژن پس از استخراج از آرشیو
+                    await _versionManager.WriteVersionsAsync(_chromiumVersion, _chromeDriverVersion);
                     
                     // بررسی نهایی وجود فایل‌ها
                     if (!File.Exists(chromiumPath) || !File.Exists(driverPath))
@@ -116,7 +116,7 @@ public class CustomChromeDriverService : IChromeDriverService
                         
                         if (result == DialogResult.Yes)
                         {
-                            interydata.Information("استفاده از Chrome سیستم...");
+                            _logger.Information("استفاده از Chrome سیستم...");
                             // در این حالت، ChromeDriver از Chrome سیستم استفاده خواهد کرد
                         }
                         else
@@ -129,7 +129,7 @@ public class CustomChromeDriverService : IChromeDriverService
         }
         catch (Exception ex)
         {
-            interydata.Error(ex, "خطا در بررسی یا دانلود Chromium و ChromeDriver");
+            _logger.Error(ex, "خطا در بررسی یا دانلود Chromium و ChromeDriver");
             throw;
         }
     }
@@ -138,7 +138,7 @@ public class CustomChromeDriverService : IChromeDriverService
     {
         try
         {
-            interydata.Information($"شروع دانلود Chromium نسخه {_chromiumVersion}...");
+            _logger.Information($"شروع دانلود Chromium نسخه {_chromiumVersion}...");
             
             var chromiumPath = Path.Combine(_driverPath, "chromium");
             var chromiumExePath = Path.Combine(chromiumPath, "chrome-win", "chrome.exe");
@@ -157,7 +157,7 @@ public class CustomChromeDriverService : IChromeDriverService
                 var currentMajorVersion = int.Parse(fileVersion.Split('.')[0]);
                 if (currentMajorVersion == 120)
                 {
-                    interydata.Information($"نسخه فعلی Chromium ({fileVersion}) صحیح است");
+                    _logger.Information($"نسخه فعلی Chromium ({fileVersion}) صحیح است");
                     return;
                 }
             }
@@ -165,8 +165,8 @@ public class CustomChromeDriverService : IChromeDriverService
             // اگر فایل در آرشیو وجود دارد، از آن استفاده می‌کنیم
             if (File.Exists(archiveFile))
             {
-                interydata.Information($"نسخه {_chromiumVersion} Chromium در آرشیو یافت شد");
-                interydata.Information("استخراج Chromium از آرشیو...");
+                _logger.Information($"نسخه {_chromiumVersion} Chromium در آرشیو یافت شد");
+                _logger.Information("استخراج Chromium از آرشیو...");
                 
                 try
                 {
@@ -181,33 +181,36 @@ public class CustomChromeDriverService : IChromeDriverService
 
                         if (result == DialogResult.No)
                         {
-                            interydata.Information("عملیات حذف فایل‌های قدیمی توسط کاربر لغو شد");
+                            _logger.Information("عملیات حذف فایل‌های قدیمی توسط کاربر لغو شد");
                             return;
                         }
                     }
                     Directory.CreateDirectory(chromiumPath);
                     ZipFile.ExtractToDirectory(archiveFile, chromiumPath, true);
-                    interydata.Information("Chromium با موفقیت از آرشیو استخراج شد");
+                    _logger.Information("Chromium با موفقیت از آرشیو استخراج شد");
+                    
+                    // به‌روزرسانی فایل ورژن پس از استخراج
+                    await _versionManager.UpdateVersionsAfterDownloadAsync(_chromiumVersion, _chromeDriverVersion);
                     return;
                 }
                 catch (Exception ex)
                 {
-                    interydata.Error(ex, "خطا در استخراج Chromium از آرشیو");
+                    _logger.Error(ex, "خطا در استخراج Chromium از آرشیو");
                     // حتی در صورت خطا در استخراج، فایل آرشیو را حفظ می‌کنیم
                 }
             }
 
             // اگر در آرشیو نبود، نیاز به دانلود داریم
-            interydata.Information($"نسخه {_chromiumVersion} Chromium در آرشیو یافت نشد");
+            _logger.Information($"نسخه {_chromiumVersion} Chromium در آرشیو یافت نشد");
             shouldDownload = true;
 
             // اگر نسخه قبلی نصب است، از کاربر تأیید می‌گیریم
             if (File.Exists(chromiumExePath))
             {
                 var fileVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(chromiumExePath).FileVersion;
-                interydata.Information($"نسخه فعلی Chromium: {fileVersion}");
+                _logger.Information($"نسخه فعلی Chromium: {fileVersion}");
                 {
-                    interydata.Information($"نسخه Chromium ({fileVersion}) با نسخه مورد نظر ({_chromiumVersion}) متفاوت است");
+                    _logger.Information($"نسخه Chromium ({fileVersion}) با نسخه مورد نظر ({_chromiumVersion}) متفاوت است");
                     shouldDownload = true;
 
                     var result = MessageBox.Show(
@@ -231,7 +234,7 @@ public class CustomChromeDriverService : IChromeDriverService
 
                             if (deleteResult == DialogResult.No)
                             {
-                                interydata.Information("عملیات حذف فایل‌های قدیمی توسط کاربر لغو شد");
+                                _logger.Information("عملیات حذف فایل‌های قدیمی توسط کاربر لغو شد");
                                 return;
                             }
 
@@ -245,7 +248,7 @@ public class CustomChromeDriverService : IChromeDriverService
                                 } 
                                 catch (Exception ex) 
                                 {
-                                    interydata.Warning($"خطا در بستن پروسه Chrome: {ex.Message}");
+                                    _logger.Warning($"خطا در بستن پروسه Chrome: {ex.Message}");
                                 }
                             }
                             
@@ -259,11 +262,11 @@ public class CustomChromeDriverService : IChromeDriverService
                                 try 
                                 { 
                                     File.Delete(file);
-                                    interydata.Information($"فایل {Path.GetFileName(file)} حذف شد");
+                                    _logger.Information($"فایل {Path.GetFileName(file)} حذف شد");
                                 } 
                                 catch (Exception ex) 
                                 {
-                                    interydata.Warning($"خطا در حذف فایل {Path.GetFileName(file)}: {ex.Message}");
+                                    _logger.Warning($"خطا در حذف فایل {Path.GetFileName(file)}: {ex.Message}");
                                 }
                             }
                             var dirs = Directory.GetDirectories(chromiumPath);
@@ -275,24 +278,24 @@ public class CustomChromeDriverService : IChromeDriverService
                                     try 
                                     { 
                                         Directory.Delete(dir, true);
-                                        interydata.Information($"پوشه {Path.GetFileName(dir)} حذف شد");
+                                        _logger.Information($"پوشه {Path.GetFileName(dir)} حذف شد");
                                     } 
                                     catch (Exception ex) 
                                     {
-                                        interydata.Warning($"خطا در حذف پوشه {Path.GetFileName(dir)}: {ex.Message}");
+                                        _logger.Warning($"خطا در حذف پوشه {Path.GetFileName(dir)}: {ex.Message}");
                                     }
                                 }
                             }
-                            interydata.Information("فایل‌های قدیمی Chromium حذف شدند");
+                            _logger.Information("فایل‌های قدیمی Chromium حذف شدند");
                         }
                         catch (Exception ex)
                         {
-                            interydata.Warning($"خطا در حذف پوشه قدیمی: {ex.Message}");
+                            _logger.Warning($"خطا در حذف پوشه قدیمی: {ex.Message}");
                         }
                     }
                     else
                     {
-                        interydata.Information("به‌روزرسانی Chromium توسط کاربر لغو شد");
+                        _logger.Information("به‌روزرسانی Chromium توسط کاربر لغو شد");
                         return;
                     }
                 }
@@ -310,7 +313,7 @@ public class CustomChromeDriverService : IChromeDriverService
                 // بررسی وجود نسخه قبلی در آرشیو
                 if (!File.Exists(zipPath))
                 {
-                    interydata.Information($"شروع دانلود Chromium از آدرس: {downloadUrl}");
+                    _logger.Information($"شروع دانلود Chromium از آدرس: {downloadUrl}");
                     
                     // تلاش برای دانلود با retry
                     var downloadSuccess = await TryDownloadWithRetryAsync(downloadUrl, zipPath);
@@ -318,20 +321,23 @@ public class CustomChromeDriverService : IChromeDriverService
                     {
                         throw new HttpRequestException("دانلود Chromium ناموفق بود");
                     }
-                    interydata.Information("Chromium با موفقیت دانلود شد");
+                    _logger.Information("Chromium با موفقیت دانلود شد");
                 }
                 else
                 {
-                    interydata.Information($"استفاده از نسخه موجود Chromium از آرشیو: {_chromiumVersion}");
+                    _logger.Information($"استفاده از نسخه موجود Chromium از آرشیو: {_chromiumVersion}");
                 }
 
                 ZipFile.ExtractToDirectory(zipPath, chromiumPath, true);
-                interydata.Information("Chromium با موفقیت استخراج شد");
+                _logger.Information("Chromium با موفقیت استخراج شد");
+                
+                // به‌روزرسانی فایل ورژن پس از استخراج
+                await _versionManager.UpdateVersionsAfterDownloadAsync(_chromiumVersion, _chromeDriverVersion);
             }
         }
         catch (Exception ex)
         {
-            interydata.Error(ex, "خطا در دانلود Chromium");
+            _logger.Error(ex, "خطا در دانلود Chromium");
             MessageBox.Show($"خطا در دانلود Chromium:\n{ex.Message}\n\nلطفاً لاگ‌ها را بررسی کنید.", "خطا",
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
             throw;
@@ -342,7 +348,7 @@ public class CustomChromeDriverService : IChromeDriverService
     {
         try
         {
-            interydata.Information("شروع دانلود ChromeDriver...");
+            _logger.Information("شروع دانلود ChromeDriver...");
             
             var driverPath = Path.Combine(_driverPath, "driver");
             var driverExePath = Path.Combine(driverPath, "chromedriver.exe");
@@ -358,13 +364,13 @@ public class CustomChromeDriverService : IChromeDriverService
             // اگر فایل اجرایی وجود دارد، نسخه آن را بررسی می‌کنیم
             if (File.Exists(driverExePath))
             {
-                interydata.Information($"ChromeDriver در مسیر {driverExePath} یافت شد");
+                _logger.Information($"ChromeDriver در مسیر {driverExePath} یافت شد");
                 
                 // بررسی نسخه ChromeDriver
                 var result = await client.GetAsync($"{CHROME_DRIVER_URL}{_chromeDriverVersion}/win64/chromedriver-win64.zip");
                 if (!result.IsSuccessStatusCode)
                 {
-                    interydata.Information($"نسخه ChromeDriver ({_chromeDriverVersion}) نیاز به به‌روزرسانی دارد");
+                    _logger.Information($"نسخه ChromeDriver ({_chromeDriverVersion}) نیاز به به‌روزرسانی دارد");
                     shouldDownload = true;
                 }
                 else
@@ -373,7 +379,7 @@ public class CustomChromeDriverService : IChromeDriverService
                     var fileVersion = System.Diagnostics.FileVersionInfo.GetVersionInfo(driverExePath).FileVersion;
                     if (fileVersion != _chromeDriverVersion)
                     {
-                        interydata.Information($"نسخه ChromeDriver موجود ({fileVersion}) با نسخه مورد نظر ({_chromeDriverVersion}) متفاوت است");
+                        _logger.Information($"نسخه ChromeDriver موجود ({fileVersion}) با نسخه مورد نظر ({_chromeDriverVersion}) متفاوت است");
                         shouldDownload = true;
                     }
                     else
@@ -386,8 +392,8 @@ public class CustomChromeDriverService : IChromeDriverService
             // اگر فایل در آرشیو وجود دارد، از آن استفاده می‌کنیم
             if (File.Exists(archiveFile))
             {
-                interydata.Information($"نسخه {_chromeDriverVersion} ChromeDriver در آرشیو یافت شد");
-                interydata.Information("استخراج ChromeDriver از آرشیو...");
+                _logger.Information($"نسخه {_chromeDriverVersion} ChromeDriver در آرشیو یافت شد");
+                _logger.Information("استخراج ChromeDriver از آرشیو...");
                 
                 try
                 {
@@ -402,7 +408,7 @@ public class CustomChromeDriverService : IChromeDriverService
 
                         if (result == DialogResult.No)
                         {
-                            interydata.Information("عملیات حذف فایل‌های قدیمی توسط کاربر لغو شد");
+                            _logger.Information("عملیات حذف فایل‌های قدیمی توسط کاربر لغو شد");
                             return;
                         }
 
@@ -416,7 +422,7 @@ public class CustomChromeDriverService : IChromeDriverService
                             } 
                             catch (Exception ex) 
                             {
-                                interydata.Warning($"خطا در بستن پروسه ChromeDriver: {ex.Message}");
+                                _logger.Warning($"خطا در بستن پروسه ChromeDriver: {ex.Message}");
                             }
                         }
                         
@@ -430,11 +436,11 @@ public class CustomChromeDriverService : IChromeDriverService
                             try 
                             { 
                                 File.Delete(file);
-                                interydata.Information($"فایل {Path.GetFileName(file)} حذف شد");
+                                _logger.Information($"فایل {Path.GetFileName(file)} حذف شد");
                             } 
                             catch (Exception ex) 
                             {
-                                interydata.Warning($"خطا در حذف فایل {Path.GetFileName(file)}: {ex.Message}");
+                                _logger.Warning($"خطا در حذف فایل {Path.GetFileName(file)}: {ex.Message}");
                             }
                         }
 
@@ -447,11 +453,11 @@ public class CustomChromeDriverService : IChromeDriverService
                                 try 
                                 { 
                                     Directory.Delete(dir, true);
-                                    interydata.Information($"پوشه {Path.GetFileName(dir)} حذف شد");
+                                    _logger.Information($"پوشه {Path.GetFileName(dir)} حذف شد");
                                 } 
                                 catch (Exception ex) 
                                 {
-                                    interydata.Warning($"خطا در حذف پوشه {Path.GetFileName(dir)}: {ex.Message}");
+                                    _logger.Warning($"خطا در حذف پوشه {Path.GetFileName(dir)}: {ex.Message}");
                                 }
                             }
                         }
@@ -478,18 +484,21 @@ public class CustomChromeDriverService : IChromeDriverService
 
                     // حذف پوشه موقت
                     Directory.Delete(extractPath, true);
-                    interydata.Information("ChromeDriver با موفقیت از آرشیو استخراج شد");
+                    _logger.Information("ChromeDriver با موفقیت از آرشیو استخراج شد");
+                    
+                    // به‌روزرسانی فایل ورژن پس از استخراج
+                    await _versionManager.UpdateVersionsAfterDownloadAsync(_chromiumVersion, _chromeDriverVersion);
                     return;
                 }
                 catch (Exception ex)
                 {
-                    interydata.Error(ex, "خطا در استخراج ChromeDriver از آرشیو");
+                    _logger.Error(ex, "خطا در استخراج ChromeDriver از آرشیو");
                     // حتی در صورت خطا در استخراج، فایل آرشیو را حفظ می‌کنیم
                 }
             }
 
             // اگر در آرشیو نبود، نیاز به دانلود داریم
-            interydata.Information($"نسخه {_chromeDriverVersion} ChromeDriver در آرشیو یافت نشد");
+            _logger.Information($"نسخه {_chromeDriverVersion} ChromeDriver در آرشیو یافت نشد");
             shouldDownload = true;
 
             if (shouldDownload)
@@ -515,7 +524,7 @@ public class CustomChromeDriverService : IChromeDriverService
                                } 
                                catch (Exception ex) 
                                {
-                                   interydata.Warning($"خطا در بستن پروسه ChromeDriver: {ex.Message}");
+                                   _logger.Warning($"خطا در بستن پروسه ChromeDriver: {ex.Message}");
                                }
                            }
                            
@@ -537,16 +546,16 @@ public class CustomChromeDriverService : IChromeDriverService
                                 try { Directory.Delete(dir, true); } catch { }
                             }
                         }
-                        interydata.Information("فایل‌های قدیمی ChromeDriver حذف شدند");
+                        _logger.Information("فایل‌های قدیمی ChromeDriver حذف شدند");
                     }
                     catch (Exception ex)
                     {
-                        interydata.Warning($"خطا در حذف پوشه قدیمی: {ex.Message}");
+                        _logger.Warning($"خطا در حذف پوشه قدیمی: {ex.Message}");
                     }
                 }
                 else
                 {
-                    interydata.Information("به‌روزرسانی ChromeDriver توسط کاربر لغو شد");
+                    _logger.Information("به‌روزرسانی ChromeDriver توسط کاربر لغو شد");
                     return;
                 }
                 
@@ -566,7 +575,7 @@ public class CustomChromeDriverService : IChromeDriverService
             // بررسی وجود نسخه قبلی در آرشیو
             if (!File.Exists(zipPath))
             {
-                interydata.Information($"شروع دانلود ChromeDriver از آدرس: {downloadUrl}");
+                _logger.Information($"شروع دانلود ChromeDriver از آدرس: {downloadUrl}");
                 
                 // تلاش برای دانلود با retry
                 var downloadSuccess = await TryDownloadWithRetryAsync(downloadUrl, zipPath);
@@ -574,11 +583,11 @@ public class CustomChromeDriverService : IChromeDriverService
                 {
                     throw new HttpRequestException("دانلود ChromeDriver ناموفق بود");
                 }
-                interydata.Information("ChromeDriver با موفقیت دانلود شد");
+                _logger.Information("ChromeDriver با موفقیت دانلود شد");
             }
             else
             {
-                interydata.Information($"استفاده از نسخه موجود ChromeDriver از آرشیو: {_chromeDriverVersion}");
+                _logger.Information($"استفاده از نسخه موجود ChromeDriver از آرشیو: {_chromeDriverVersion}");
             }
 
             // استخراج به یک پوشه موقت
@@ -608,33 +617,39 @@ public class CustomChromeDriverService : IChromeDriverService
             {
                 // نادیده گرفتن خطای حذف پوشه موقت
             }
-            interydata.Information("ChromeDriver با موفقیت استخراج شد");
+            _logger.Information("ChromeDriver با موفقیت استخراج شد");
+            
+            // به‌روزرسانی فایل ورژن پس از استخراج
+            await _versionManager.UpdateVersionsAfterDownloadAsync(_chromiumVersion, _chromeDriverVersion);
 
             // فایل زیپ را در آرشیو نگه می‌داریم برای استفاده‌های بعدی
         }
         catch (Exception ex)
         {
-            interydata.Error(ex, "خطا در دانلود ChromeDriver");
+            _logger.Error(ex, "خطا در دانلود ChromeDriver");
             MessageBox.Show($"خطا در دانلود ChromeDriver:\n{ex.Message}\n\nلطفاً لاگ‌ها را بررسی کنید.", "خطا",
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
             throw;
         }
     }
 
-    private async Task ExtractFromArchiveAsync(string archivePath, string extractPath)
+    private Task ExtractFromArchiveAsync(string archivePath, string extractPath)
     {
-        try
+        return Task.Run(() =>
         {
-            interydata.Information($"استخراج از آرشیو: {archivePath}");
-            Directory.CreateDirectory(extractPath);
-            ZipFile.ExtractToDirectory(archivePath, extractPath, true);
-            interydata.Information("استخراج با موفقیت انجام شد");
-        }
-        catch (Exception ex)
-        {
-            interydata.Error(ex, "خطا در استخراج از آرشیو");
-            throw;
-        }
+            try
+            {
+                _logger.Information($"استخراج از آرشیو: {archivePath}");
+                Directory.CreateDirectory(extractPath);
+                ZipFile.ExtractToDirectory(archivePath, extractPath, true);
+                _logger.Information("استخراج با موفقیت انجام شد");
+            }
+            catch (Exception ex)
+            {
+                _logger.Error(ex, "خطا در استخراج از آرشیو");
+                throw;
+            }
+        });
     }
 
     private async Task<bool> TryDownloadWithRetryAsync(string url, string filePath, int maxRetries = 3)
@@ -643,7 +658,7 @@ public class CustomChromeDriverService : IChromeDriverService
         {
             try
             {
-                interydata.Information($"تلاش {attempt} از {maxRetries} برای دانلود: {url}");
+                _logger.Information($"تلاش {attempt} از {maxRetries} برای دانلود: {url}");
                 
                 using var client = new HttpClient();
                 client.Timeout = TimeSpan.FromMinutes(10); // افزایش timeout
@@ -651,16 +666,16 @@ public class CustomChromeDriverService : IChromeDriverService
                 // اضافه کردن User-Agent برای جلوگیری از مسدود شدن
                 client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
                 
-                await client.DownloadFileAsync(url, filePath, interydata);
+                await client.DownloadFileAsync(url, filePath, _logger);
                 return true;
             }
             catch (Exception ex)
             {
-                interydata.Warning($"خطا در تلاش {attempt}: {ex.Message}");
+                _logger.Warning($"خطا در تلاش {attempt}: {ex.Message}");
                 if (attempt < maxRetries)
                 {
                     var delay = TimeSpan.FromSeconds(Math.Pow(2, attempt)); // Exponential backoff
-                    interydata.Information($"صبر {delay.TotalSeconds} ثانیه قبل از تلاش بعدی...");
+                    _logger.Information($"صبر {delay.TotalSeconds} ثانیه قبل از تلاش بعدی...");
                     await Task.Delay(delay);
                 }
             }
@@ -673,12 +688,12 @@ public class CustomChromeDriverService : IChromeDriverService
         try
         {
             // استفاده از نسخه 120 که با Chromium ما سازگار است
-            interydata.Information("در حال دانلود ChromeDriver نسخه 120...");
+            _logger.Information("در حال دانلود ChromeDriver نسخه 120...");
             return "120.0.6099.109";
         }
         catch (Exception ex)
         {
-            interydata.Error(ex, "خطا در دریافت نسخه ChromeDriver");
+            _logger.Error(ex, "خطا در دریافت نسخه ChromeDriver");
             throw;
         }
     }
@@ -696,7 +711,7 @@ public class CustomChromeDriverService : IChromeDriverService
         }
         catch (Exception ex)
         {
-            interydata.Error(ex, "خطا در خواندن نسخه Chrome");
+            _logger.Error(ex, "خطا در خواندن نسخه Chrome");
         }
         return string.Empty;
     }
@@ -705,7 +720,7 @@ public class CustomChromeDriverService : IChromeDriverService
     {
         try
         {
-            interydata.Information("تنظیم ChromeDriver...");
+            _logger.Information("تنظیم ChromeDriver...");
 
             var chromiumPath = Path.Combine(_driverPath, "chromium", "chrome-win", "chrome.exe");
             var driverPath = Path.Combine(_driverPath, "driver");
@@ -715,7 +730,7 @@ public class CustomChromeDriverService : IChromeDriverService
             // اگر Chromium دانلود شده موجود نیست، از Chrome سیستم استفاده می‌کنیم
             if (!File.Exists(chromiumPath))
             {
-                interydata.Warning($"Chromium در مسیر {chromiumPath} یافت نشد");
+                _logger.Warning($"Chromium در مسیر {chromiumPath} یافت نشد");
                 
                 // بررسی وجود Chrome در مسیرهای معمول
                 var systemChromePaths = new[]
@@ -730,7 +745,7 @@ public class CustomChromeDriverService : IChromeDriverService
                     if (File.Exists(path))
                     {
                         chromiumPath = path;
-                        interydata.Information($"استفاده از Chrome سیستم: {chromiumPath}");
+                        _logger.Information($"استفاده از Chrome سیستم: {chromiumPath}");
                         break;
                     }
                 }
@@ -912,20 +927,20 @@ public class CustomChromeDriverService : IChromeDriverService
             service.PortServerAddress = "127.0.0.1";
             service.WhitelistedIPAddresses = "127.0.0.1";
 
-            interydata.Information($"راه‌اندازی ChromeDriver با Chromium نسخه {_chromiumVersion}...");
+            _logger.Information($"راه‌اندازی ChromeDriver با Chromium نسخه {_chromiumVersion}...");
             
             // تنظیم زمان انتظار برای راه‌اندازی
             var timeout = TimeSpan.FromMinutes(3);
             _driver = new ChromeDriver(service, options, timeout);
 
-            interydata.Information("تنظیم DevTools...");
+            _logger.Information("تنظیم DevTools...");
             await Task.Delay(2000); // کمی صبر می‌کنیم تا مرورگر کاملاً آماده شود
             
             try
             {
                 var devTools = _driver.GetDevToolsSession();
                 var version = devTools.GetVersionSpecificDomains<OpenQA.Selenium.DevTools.V120.DevToolsSessionDomains>();
-                interydata.Information($"نسخه DevTools: {version}");
+                _logger.Information($"نسخه DevTools: {version}");
 
                 var network = version.Network;
                 await network.Enable(new OpenQA.Selenium.DevTools.V120.Network.EnableCommandSettings());
@@ -935,11 +950,11 @@ public class CustomChromeDriverService : IChromeDriverService
                 // network.ResponseReceived += OnResponseReceived;
                 // network.LoadingFinished += OnLoadingFinished;
 
-                interydata.Information("DevTools با موفقیت تنظیم شد");
+                _logger.Information("DevTools با موفقیت تنظیم شد");
             }
             catch (Exception ex)
             {
-                interydata.Warning($"خطا در تنظیم DevTools: {ex.Message}");
+                _logger.Warning($"خطا در تنظیم DevTools: {ex.Message}");
                 // ادامه می‌دهیم حتی اگر DevTools تنظیم نشد
             }
 
@@ -947,7 +962,7 @@ public class CustomChromeDriverService : IChromeDriverService
         }
         catch (Exception ex)
         {
-            interydata.Error(ex, "خطا در راه‌اندازی ChromeDriver");
+            _logger.Error(ex, "خطا در راه‌اندازی ChromeDriver");
             throw;
         }
     }
@@ -958,11 +973,11 @@ public class CustomChromeDriverService : IChromeDriverService
         {
             if (_driver == null)
             {
-                interydata.Error(new InvalidOperationException("ChromeDriver راه‌اندازی نشده است"), "ChromeDriver راه‌اندازی نشده است");
+                _logger.Error(new InvalidOperationException("ChromeDriver راه‌اندازی نشده است"), "ChromeDriver راه‌اندازی نشده است");
                 return false;
             }
 
-            interydata.Information("شروع فرآیند پر کردن فرم...");
+            _logger.Information("شروع فرآیند پر کردن فرم...");
 
             // خواندن تنظیمات وب‌سایت
             var websiteSettings = File.Exists("website_settings.json") 
@@ -971,18 +986,18 @@ public class CustomChromeDriverService : IChromeDriverService
 
             if (websiteSettings == null)
             {
-                interydata.Error(new FileNotFoundException("تنظیمات وب‌سایت یافت نشد"), "تنظیمات وب‌سایت یافت نشد");
+                _logger.Error(new FileNotFoundException("تنظیمات وب‌سایت یافت نشد"), "تنظیمات وب‌سایت یافت نشد");
                 return false;
             }
 
-            interydata.Information($"رفتن به آدرس: {websiteSettings.WebsiteUrl}");
+            _logger.Information($"رفتن به آدرس: {websiteSettings.WebsiteUrl}");
             _driver.Navigate().GoToUrl(websiteSettings.WebsiteUrl);
 
             // صبر برای بارگذاری صفحه
             await Task.Delay(3000);
 
             // پر کردن فیلدها به ترتیب
-            interydata.Information("پر کردن فیلدهای ورودی به ترتیب...");
+            _logger.Information("پر کردن فیلدهای ورودی به ترتیب...");
             
             foreach (var field in websiteSettings.Fields)
             {
@@ -991,7 +1006,7 @@ public class CustomChromeDriverService : IChromeDriverService
 
                 try
                 {
-                    interydata.Information($"پر کردن فیلد: {field.Name}");
+                    _logger.Information($"پر کردن فیلد: {field.Name}");
                     
                     // تلاش برای پیدا کردن فیلد با روش‌های مختلف
                     IWebElement fieldElement = null;
@@ -1014,7 +1029,7 @@ public class CustomChromeDriverService : IChromeDriverService
                             }
                             catch
                             {
-                                interydata.Warning($"فیلد {field.Name} یافت نشد");
+                                _logger.Warning($"فیلد {field.Name} یافت نشد");
                                 continue;
                             }
                         }
@@ -1025,12 +1040,12 @@ public class CustomChromeDriverService : IChromeDriverService
                         fieldElement.Clear();
                         await Task.Delay(500); // کمی صبر بین ورودی‌ها
                         fieldElement.SendKeys(field.Value);
-                        interydata.Information($"فیلد {field.Name} با موفقیت پر شد");
+                        _logger.Information($"فیلد {field.Name} با موفقیت پر شد");
                     }
                 }
                 catch (Exception ex)
                 {
-                    interydata.Warning($"خطا در پر کردن فیلد {field.Name}: {ex.Message}");
+                    _logger.Warning($"خطا در پر کردن فیلد {field.Name}: {ex.Message}");
                 }
             }
 
@@ -1038,25 +1053,25 @@ public class CustomChromeDriverService : IChromeDriverService
             try
             {
                 var submitButton = _driver.FindElement(By.XPath("//button[@type='submit'] | //input[@type='submit'] | //button[contains(text(), 'ارسال')] | //button[contains(text(), 'Submit')] | //button[contains(text(), 'ورود')] | //button[contains(text(), 'Login')]"));
-                interydata.Information("کلیک روی دکمه ارسال فرم...");
+                _logger.Information("کلیک روی دکمه ارسال فرم...");
                 submitButton.Click();
 
                 // صبر برای پردازش فرم
                 await Task.Delay(3000);
 
-                interydata.Information("فرم با موفقیت پر و ارسال شد");
+                _logger.Information("فرم با موفقیت پر و ارسال شد");
                 return true;
             }
             catch (Exception ex)
             {
-                interydata.Warning($"دکمه ارسال فرم یافت نشد یا خطا در کلیک: {ex.Message}");
-                interydata.Information("فرم پر شد اما دکمه ارسال یافت نشد");
+                _logger.Warning($"دکمه ارسال فرم یافت نشد یا خطا در کلیک: {ex.Message}");
+                _logger.Information("فرم پر شد اما دکمه ارسال یافت نشد");
                 return true; // فرم پر شده است، حتی اگر دکمه ارسال یافت نشود
             }
         }
         catch (Exception ex)
         {
-            interydata.Error(ex, "خطا در فرآیند لاگین");
+            _logger.Error(ex, "خطا در فرآیند لاگین");
             return false;
         }
     }
@@ -1087,13 +1102,115 @@ public class CustomChromeDriverService : IChromeDriverService
             _driver?.Quit();
             _driver?.Dispose();
             _driver = null;
-            interydata.Information("ChromeDriver متوقف شد");
+            _logger.Information("ChromeDriver متوقف شد");
         }
         catch (Exception ex)
         {
-            interydata.Error(ex, "خطا در توقف ChromeDriver");
+            _logger.Error(ex, "خطا در توقف ChromeDriver");
             throw;
         }
+    }
+
+    /// <summary>
+    /// بررسی ورژن Chromium و تعیین نیاز به جایگزینی
+    /// </summary>
+    /// <param name="chromiumPath">مسیر فایل اجرایی Chromium</param>
+    /// <param name="currentVersion">ورژن فعلی از فایل ورژن</param>
+    /// <returns>نتیجه بررسی ورژن</returns>
+    private async Task<VersionCheckResult> CheckChromiumVersionAsync(string chromiumPath, string? currentVersion)
+    {
+        var result = new VersionCheckResult();
+        
+        // اگر فایل ورژن وجود ندارد یا خالی است
+        if (string.IsNullOrEmpty(currentVersion))
+        {
+            _logger.Information("فایل ورژن Chromium موجود نیست یا خالی است");
+            
+            // بررسی وجود فایل اجرایی
+            if (File.Exists(chromiumPath))
+            {
+                _logger.Information("فایل اجرایی Chromium موجود است، فایل ورژن ایجاد می‌شود");
+                // فایل اجرایی موجود است، فقط فایل ورژن ایجاد می‌کنیم
+                await _versionManager.AutoDetectAndWriteVersionsAsync();
+                result.NeedsReplacement = false;
+                result.Reason = "فایل ورژن ایجاد شد";
+            }
+            else
+            {
+                _logger.Information("فایل اجرایی Chromium موجود نیست، نیاز به دانلود");
+                result.NeedsReplacement = true;
+                result.Reason = "فایل اجرایی موجود نیست";
+            }
+        }
+        else
+        {
+            // فایل ورژن موجود است، بررسی تطبیق
+            if (currentVersion == _chromiumVersion)
+            {
+                _logger.Information($"ورژن Chromium ({currentVersion}) با ورژن مورد نظر ({_chromiumVersion}) مطابقت دارد");
+                result.NeedsReplacement = false;
+                result.Reason = "ورژن‌ها مطابقت دارند";
+            }
+            else
+            {
+                _logger.Information($"ورژن Chromium ({currentVersion}) با ورژن مورد نظر ({_chromiumVersion}) متفاوت است");
+                result.NeedsReplacement = true;
+                result.Reason = "ورژن‌ها متفاوت هستند";
+            }
+        }
+        
+        return result;
+    }
+    
+    /// <summary>
+    /// بررسی ورژن ChromeDriver و تعیین نیاز به جایگزینی
+    /// </summary>
+    /// <param name="driverPath">مسیر فایل اجرایی ChromeDriver</param>
+    /// <param name="currentVersion">ورژن فعلی از فایل ورژن</param>
+    /// <returns>نتیجه بررسی ورژن</returns>
+    private async Task<VersionCheckResult> CheckChromeDriverVersionAsync(string driverPath, string? currentVersion)
+    {
+        var result = new VersionCheckResult();
+        
+        // اگر فایل ورژن وجود ندارد یا خالی است
+        if (string.IsNullOrEmpty(currentVersion))
+        {
+            _logger.Information("فایل ورژن ChromeDriver موجود نیست یا خالی است");
+            
+            // بررسی وجود فایل اجرایی
+            if (File.Exists(driverPath))
+            {
+                _logger.Information("فایل اجرایی ChromeDriver موجود است، فایل ورژن ایجاد می‌شود");
+                // فایل اجرایی موجود است، فقط فایل ورژن ایجاد می‌کنیم
+                await _versionManager.AutoDetectAndWriteVersionsAsync();
+                result.NeedsReplacement = false;
+                result.Reason = "فایل ورژن ایجاد شد";
+            }
+            else
+            {
+                _logger.Information("فایل اجرایی ChromeDriver موجود نیست، نیاز به دانلود");
+                result.NeedsReplacement = true;
+                result.Reason = "فایل اجرایی موجود نیست";
+            }
+        }
+        else
+        {
+            // فایل ورژن موجود است، بررسی تطبیق
+            if (currentVersion == _chromeDriverVersion)
+            {
+                _logger.Information($"ورژن ChromeDriver ({currentVersion}) با ورژن مورد نظر ({_chromeDriverVersion}) مطابقت دارد");
+                result.NeedsReplacement = false;
+                result.Reason = "ورژن‌ها مطابقت دارند";
+            }
+            else
+            {
+                _logger.Information($"ورژن ChromeDriver ({currentVersion}) با ورژن مورد نظر ({_chromeDriverVersion}) متفاوت است");
+                result.NeedsReplacement = true;
+                result.Reason = "ورژن‌ها متفاوت هستند";
+            }
+        }
+        
+        return result;
     }
 }
 
@@ -1134,4 +1251,13 @@ public static class HttpClientExtensions
             }
         }
     }
+}
+
+/// <summary>
+/// نتیجه بررسی ورژن
+/// </summary>
+public class VersionCheckResult
+{
+    public bool NeedsReplacement { get; set; }
+    public string Reason { get; set; } = string.Empty;
 }
