@@ -72,6 +72,9 @@ public class NetworkService : INetworkService
             var devTools = _driver.GetDevToolsSession();
             var domains = devTools.GetVersionSpecificDomains<OpenQA.Selenium.DevTools.V120.DevToolsSessionDomains>();
             
+            // فعال کردن Network domain
+            await domains.Network.Enable(new OpenQA.Selenium.DevTools.V120.Network.EnableCommandSettings());
+            
             // تنظیم رویداد دریافت پاسخ
             domains.Network.ResponseReceived += async (sender, e) => 
             {
@@ -148,7 +151,7 @@ public class NetworkService : INetworkService
             {
                 Url = e.Request.Url,
                 Method = e.Request.Method,
-                RequestHeaders = e.Request.Headers.ToString(),
+                RequestHeaders = FormatHeaders(e.Request.Headers),
                 RequestBody = e.Request.PostData ?? string.Empty,
                 Timestamp = DateTime.Now
             };
@@ -159,7 +162,11 @@ public class NetworkService : INetworkService
             // اطلاع‌رسانی به UI
             RequestAdded?.Invoke(this, request);
             
-            _logger.Debug($"درخواست جدید: {request.Method} {request.Url}");
+            // فقط آدرس صفحات اصلی را در لاگ نمایش دهید
+            if (IsMainPageRequest(e.Request.Url))
+            {
+                _logger.Information($"صفحه بارگذاری شد: {e.Request.Url}");
+            }
         }
         catch (Exception ex)
         {
@@ -180,17 +187,28 @@ public class NetworkService : INetworkService
             if (request != null)
             {
                 // به‌روزرسانی اطلاعات پاسخ
-                request.ResponseHeaders = e.Response.Headers.ToString();
+                request.ResponseHeaders = FormatResponseHeaders(e.Response.Headers);
                 request.StatusCode = (int)e.Response.Status;
                 request.ContentType = e.Response.MimeType;
                 
-                // دریافت Response Body
-                await GetResponseBodyAsync(request, e.RequestId);
-                
-                // اطلاع‌رسانی به UI
+                // اطلاع‌رسانی اولیه به UI
                 RequestUpdated?.Invoke(this, request);
                 
-                _logger.Debug($"پاسخ دریافت شد: {request.StatusCode} {request.Url}");
+                // دریافت Response Body با تاخیر
+                _ = Task.Run(async () =>
+                {
+                    await Task.Delay(100); // تاخیر کوتاه برای اطمینان از تکمیل پاسخ
+                    await GetResponseBodyAsync(request, e.RequestId);
+                    
+                    // اطلاع‌رسانی مجدد به UI پس از دریافت Response Body
+                    RequestUpdated?.Invoke(this, request);
+                });
+                
+                // فقط پاسخ صفحات اصلی را در لاگ نمایش دهید
+                if (IsMainPageRequest(e.Response.Url))
+                {
+                    _logger.Information($"پاسخ دریافت شد: {request.StatusCode} {request.Url}");
+                }
             }
         }
         catch (Exception ex)
@@ -210,21 +228,128 @@ public class NetworkService : INetworkService
         {
             if (_driver != null)
             {
-                var network = _driver.GetDevToolsSession()?.GetVersionSpecificDomains<OpenQA.Selenium.DevTools.V120.DevToolsSessionDomains>()?.Network;
-                if (network != null)
+                var devTools = _driver.GetDevToolsSession();
+                if (devTools != null)
                 {
-                    var responseBody = await network.GetResponseBody(new GetResponseBodyCommandSettings { RequestId = requestId });
-                    if (responseBody != null && !string.IsNullOrEmpty(responseBody.Body))
+                    var domains = devTools.GetVersionSpecificDomains<OpenQA.Selenium.DevTools.V120.DevToolsSessionDomains>();
+                    var network = domains.Network;
+                    
+                    if (network != null)
                     {
-                        request.ResponseBody = responseBody.Body;
+                        // فعال کردن Network domain اگر فعال نباشد
+                        await network.Enable(new OpenQA.Selenium.DevTools.V120.Network.EnableCommandSettings());
+                        
+                        // دریافت Response Body
+                        var responseBody = await network.GetResponseBody(new GetResponseBodyCommandSettings { RequestId = requestId });
+                        if (responseBody != null && !string.IsNullOrEmpty(responseBody.Body))
+                        {
+                            request.ResponseBody = responseBody.Body;
+                            _logger.Debug($"Response Body دریافت شد برای: {request.Url}");
+                        }
+                        else
+                        {
+                            _logger.Debug($"Response Body خالی است برای: {request.Url}");
+                        }
                     }
                 }
             }
         }
         catch (Exception ex)
         {
-            _logger.Warning($"خطا در دریافت Response Body: {ex.Message}");
+            _logger.Warning($"خطا در دریافت Response Body برای {request.Url}: {ex.Message}");
         }
+    }
+
+    /// <summary>
+    /// بررسی اینکه آیا درخواست مربوط به صفحه اصلی است یا خیر
+    /// </summary>
+    /// <param name="url">آدرس URL</param>
+    /// <returns>true اگر درخواست مربوط به صفحه اصلی باشد</returns>
+    private bool IsMainPageRequest(string url)
+    {
+        // فیلتر کردن درخواست‌های مربوط به منابع (CSS, JS, Images, etc.)
+        var resourceExtensions = new[] { ".css", ".js", ".png", ".jpg", ".jpeg", ".gif", ".svg", ".ico", ".woff", ".woff2", ".ttf" };
+        var resourcePaths = new[] { "/api/", "/assets/", "/static/", "/css/", "/js/", "/images/", "/fonts/" };
+        
+        // بررسی پسوند فایل
+        if (resourceExtensions.Any(ext => url.ToLower().Contains(ext)))
+            return false;
+            
+        // بررسی مسیرهای منابع
+        if (resourcePaths.Any(path => url.ToLower().Contains(path)))
+            return false;
+            
+        // بررسی درخواست‌های XHR/Fetch
+        if (url.Contains("/api/") || url.Contains("/ajax/") || url.Contains("/fetch/"))
+            return false;
+            
+        return true;
+    }
+
+    /// <summary>
+    /// فرمت کردن headers به صورت قابل خواندن
+    /// </summary>
+    /// <param name="headers">headers خام</param>
+    /// <returns>headers فرمت شده</returns>
+    private string FormatHeaders(OpenQA.Selenium.DevTools.V120.Network.Headers headers)
+    {
+        if (headers == null)
+            return string.Empty;
+            
+        var headerList = new List<string>();
+        
+        // استفاده از reflection برای دریافت تمام properties
+        var properties = headers.GetType().GetProperties();
+        foreach (var property in properties)
+        {
+            try
+            {
+                var value = property.GetValue(headers);
+                if (value != null && !string.IsNullOrEmpty(value.ToString()))
+                {
+                    headerList.Add($"{property.Name}: {value}");
+                }
+            }
+            catch
+            {
+                // نادیده گرفتن خطاهای reflection
+            }
+        }
+        
+        return headerList.Count > 0 ? string.Join("\n", headerList) : "No headers available";
+    }
+
+    /// <summary>
+    /// فرمت کردن response headers به صورت قابل خواندن
+    /// </summary>
+    /// <param name="headers">response headers خام</param>
+    /// <returns>response headers فرمت شده</returns>
+    private string FormatResponseHeaders(OpenQA.Selenium.DevTools.V120.Network.Headers headers)
+    {
+        if (headers == null)
+            return string.Empty;
+            
+        var headerList = new List<string>();
+        
+        // استفاده از reflection برای دریافت تمام properties
+        var properties = headers.GetType().GetProperties();
+        foreach (var property in properties)
+        {
+            try
+            {
+                var value = property.GetValue(headers);
+                if (value != null && !string.IsNullOrEmpty(value.ToString()))
+                {
+                    headerList.Add($"{property.Name}: {value}");
+                }
+            }
+            catch
+            {
+                // نادیده گرفتن خطاهای reflection
+            }
+        }
+        
+        return headerList.Count > 0 ? string.Join("\n", headerList) : "No headers available";
     }
     
     #endregion
