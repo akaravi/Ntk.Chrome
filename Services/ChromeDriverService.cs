@@ -602,6 +602,8 @@ public class CustomChromeDriverService : IChromeDriverService
 
             var chromiumPath = Path.Combine(_driverPath, "chromium", "chrome-win", "chrome.exe");
             var driverPath = Path.Combine(_driverPath, "driver");
+            if (!File.Exists(chromiumPath))
+                chromiumPath = Path.Combine(_driverPath, "chromium", "chrome-win64", "chrome.exe");
 
             if (!File.Exists(chromiumPath))
             {
