@@ -930,10 +930,10 @@ public class CustomChromeDriverService : IChromeDriverService
                 var network = version.Network;
                 await network.Enable(new OpenQA.Selenium.DevTools.V120.Network.EnableCommandSettings());
 
-                // تنظیم event handlers برای دریافت اطلاعات کامل شبکه
-                network.RequestWillBeSent += OnRequestWillBeSent;
-                network.ResponseReceived += OnResponseReceived;
-                network.LoadingFinished += OnLoadingFinished;
+                // غیرفعال کردن لاگ‌گیری شبکه برای کاهش حجم لاگ
+                // network.RequestWillBeSent += OnRequestWillBeSent;
+                // network.ResponseReceived += OnResponseReceived;
+                // network.LoadingFinished += OnLoadingFinished;
 
                 interydata.Information("DevTools با موفقیت تنظیم شد");
             }
@@ -1061,56 +1061,24 @@ public class CustomChromeDriverService : IChromeDriverService
         }
     }
 
+    // متدهای لاگ‌گیری شبکه غیرفعال شده‌اند
+    // این متدها فقط برای نمایش در جدول درخواست‌ها استفاده می‌شوند
+    /*
     private void OnRequestWillBeSent(object sender, RequestWillBeSentEventArgs e)
     {
-        try
-        {
-            interydata.Information($"Request: {e.Request.Method} {e.Request.Url}");
-            interydata.Information($"Request Headers: {string.Join(", ", e.Request.Headers?.Select(h => $"{h.Key}: {h.Value}") ?? new string[0])}");
-            if (!string.IsNullOrEmpty(e.Request.PostData))
-            {
-                interydata.Information($"Request Body: {e.Request.PostData}");
-            }
-        }
-        catch (Exception ex)
-        {
-            interydata.Warning($"خطا در پردازش Request: {ex.Message}");
-        }
+        // غیرفعال شده - لاگ‌ها در جدول نمایش داده می‌شوند
     }
 
     private void OnResponseReceived(object sender, ResponseReceivedEventArgs e)
     {
-        try
-        {
-            interydata.Information($"Response: {e.Response.Status} {e.Response.StatusText}");
-            interydata.Information($"Response Headers: {string.Join(", ", e.Response.Headers?.Select(h => $"{h.Key}: {h.Value}") ?? new string[0])}");
-        }
-        catch (Exception ex)
-        {
-            interydata.Warning($"خطا در پردازش Response: {ex.Message}");
-        }
+        // غیرفعال شده - لاگ‌ها در جدول نمایش داده می‌شوند
     }
 
     private async void OnLoadingFinished(object sender, LoadingFinishedEventArgs e)
     {
-        try
-        {
-            // دریافت Response Body
-            var network = _driver?.GetDevToolsSession()?.GetVersionSpecificDomains<OpenQA.Selenium.DevTools.V120.DevToolsSessionDomains>()?.Network;
-            if (network != null)
-            {
-                var responseBody = await network.GetResponseBody(new GetResponseBodyCommandSettings { RequestId = e.RequestId });
-                if (responseBody != null && !string.IsNullOrEmpty(responseBody.Body))
-                {
-                    interydata.Information($"Response Body: {responseBody.Body}");
-                }
-            }
-        }
-        catch (Exception ex)
-        {
-            interydata.Warning($"خطا در دریافت Response Body: {ex.Message}");
-        }
+        // غیرفعال شده - لاگ‌ها در جدول نمایش داده می‌شوند
     }
+    */
 
     public void StopDriver()
     {

@@ -1,44 +1,112 @@
-using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
-using OpenQA.Selenium.DevTools;
-using OpenQA.Selenium.DevTools.V120.Network;
 using Ntk.Chrome.Models;
 using Ntk.Chrome.Services;
 using System.ComponentModel;
 using Newtonsoft.Json;
+using System.Text;
 
 namespace Ntk.Chrome.Forms;
 
+/// <summary>
+/// فرم اصلی برنامه که فقط مسئول نمایش و تعامل با کاربر است
+/// تمام منطق‌های غیر نمایشی به سرویس‌ها منتقل شده‌اند
+/// </summary>
 public partial class MainForm : Form
 {
+    #region Fields and Properties
+    
+    /// <summary>
+    /// سرویس لاگ‌گیری برای ثبت رویدادها و خطاها
+    /// </summary>
     private readonly ILogger _logger;
-    private readonly Services.IChromeDriverService _chromeDriverService;
+    
+    /// <summary>
+    /// سرویس مدیریت ChromeDriver برای کنترل مرورگر
+    /// </summary>
+    private readonly IChromeDriverService _chromeDriverService;
+    
+    /// <summary>
+    /// سرویس مدیریت شبکه و درخواست‌ها
+    /// </summary>
+    private readonly INetworkService _networkService;
+    
+    /// <summary>
+    /// نمونه ChromeDriver برای کنترل مرورگر
+    /// </summary>
     private ChromeDriver? _driver;
+    
+    /// <summary>
+    /// لیست درخواست‌های شبکه که در جدول نمایش داده می‌شوند
+    /// </summary>
     private readonly BindingList<RequestInfo> _requests;
+    
+    /// <summary>
+    /// دکمه شروع برنامه
+    /// </summary>
     private Button btnStart = null!;
+    
+    /// <summary>
+    /// دکمه توقف برنامه
+    /// </summary>
     private Button btnStop = null!;
+    
+    /// <summary>
+    /// نشانگر وضعیت راه‌اندازی اولیه برنامه
+    /// </summary>
     private bool _isInitialized;
+    
+    #endregion
 
+    #region Constructor
+    
+    /// <summary>
+    /// سازنده فرم اصلی
+    /// تنظیمات اولیه، بارگذاری تنظیمات و راه‌اندازی سرویس‌ها
+    /// </summary>
     public MainForm()
     {
+        // راه‌اندازی کامپوننت‌های فرم
         InitializeComponent();
+        
+        // ایجاد لیست درخواست‌ها برای نمایش در جدول
         _requests = new BindingList<RequestInfo>();
+        
+        // راه‌اندازی سرویس لاگ‌گیری
         _logger = new LoggingService(logTextBox);
+        
+        // راه‌اندازی سرویس شبکه
+        _networkService = new NetworkService(_logger);
+        
+        // بارگذاری تنظیمات از فایل JSON یا ایجاد تنظیمات پیش‌فرض
         var settings = File.Exists("settings.json") 
             ? JsonConvert.DeserializeObject<AppSettings>(File.ReadAllText("settings.json")) 
             ?? new AppSettings()
             : new AppSettings();
 
+        // راه‌اندازی سرویس ChromeDriver
         _chromeDriverService = new CustomChromeDriverService(
             settings.ChromeDriverPath ?? "ChromeDriver",
             _logger
         );
 
+        // تنظیم رویدادهای سرویس شبکه
+        SetupNetworkServiceEvents();
+
+        // شروع فرآیند راه‌اندازی اولیه
         InitializeAsync();
     }
+    
+    #endregion
 
+    #region Initialization Methods
+    
+    /// <summary>
+    /// راه‌اندازی اولیه برنامه
+    /// ایجاد پوشه‌های لازم، بارگذاری تنظیمات و آماده‌سازی محیط
+    /// </summary>
     private async void InitializeAsync()
     {
+        // جلوگیری از راه‌اندازی مجدد
         if (_isInitialized)
         {
             return;
@@ -52,12 +120,14 @@ public partial class MainForm : Form
 
             _logger.Information("شروع راه‌اندازی برنامه...");
 
-            // Create necessary directories
+            // ایجاد پوشه‌های لازم
             Directory.CreateDirectory("logs");
             Directory.CreateDirectory(Path.Combine(Application.StartupPath, "ChromeDriver"));
 
+            // راه‌اندازی سرویس ChromeDriver
             await _chromeDriverService.InitializeAsync();
             
+            // بررسی وجود فایل تنظیمات و نمایش فرم تنظیمات در صورت عدم وجود
             if (!File.Exists("settings.json"))
             {
                 _logger.Information("نمایش فرم تنظیمات...");
@@ -71,6 +141,7 @@ public partial class MainForm : Form
                 _logger.Information("تنظیمات با موفقیت ذخیره شد");
             }
 
+            // بررسی وجود فایل تنظیمات سایت و نمایش فرم تنظیمات سایت در صورت عدم وجود
             if (!File.Exists("website_settings.json"))
             {
                 _logger.Information("نمایش فرم تنظیمات سایت...");
@@ -96,9 +167,20 @@ public partial class MainForm : Form
                 MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
+    
+    #endregion
 
+    #region Event Handlers
+    
+    /// <summary>
+    /// رویداد کلیک دکمه شروع
+    /// راه‌اندازی ChromeDriver، شروع فرآیند پر کردن فرم و مدیریت خطاها
+    /// </summary>
+    /// <param name="sender">فرستنده رویداد</param>
+    /// <param name="e">اطلاعات رویداد</param>
     private async void btnStart_Click(object sender, EventArgs e)
     {
+        // بررسی وضعیت راه‌اندازی اولیه
         if (!_isInitialized)
         {
             MessageBox.Show("لطفاً صبر کنید تا راه‌اندازی اولیه تکمیل شود.", "هشدار",
@@ -112,12 +194,14 @@ public partial class MainForm : Form
             if (btnStart != null) btnStart.Enabled = false;
             if (btnStop != null) btnStop.Enabled = false;
 
+            // راه‌اندازی ChromeDriver
             await InitializeChromeDriverAsync();
             
             // شروع فرآیند پر کردن فرم
             _logger.Information("شروع فرآیند پر کردن فرم...");
             var formSuccess = await _chromeDriverService.FillFormAsync();
             
+            // بررسی نتیجه پر کردن فرم
             if (formSuccess)
             {
                 _logger.Information("فرم با موفقیت پر شد");
@@ -148,15 +232,28 @@ public partial class MainForm : Form
         }
     }
 
+    /// <summary>
+    /// رویداد کلیک دکمه توقف
+    /// متوقف کردن ChromeDriver و پاک کردن داده‌ها
+    /// </summary>
+    /// <param name="sender">فرستنده رویداد</param>
+    /// <param name="e">اطلاعات رویداد</param>
     private void btnStop_Click(object sender, EventArgs e)
     {
         try
         {
+            // توقف ChromeDriver
             _chromeDriverService.StopDriver();
             _driver = null;
+            
+            // پاک کردن لیست درخواست‌ها
+            _networkService.ClearRequests();
             _requests.Clear();
+            
+            // تنظیم وضعیت دکمه‌ها
             btnStart.Enabled = true;
             btnStop.Enabled = false;
+            
             _logger.Information("برنامه متوقف شد");
         }
         catch (Exception ex)
@@ -165,56 +262,36 @@ public partial class MainForm : Form
         }
     }
 
+    /// <summary>
+    /// رویداد بسته شدن فرم
+    /// پاک کردن منابع ChromeDriver
+    /// </summary>
+    /// <param name="sender">فرستنده رویداد</param>
+    /// <param name="e">اطلاعات رویداد</param>
+    private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+    {
+        // بستن و آزاد کردن منابع ChromeDriver
+        _driver?.Quit();
+        _driver?.Dispose();
+    }
+    
+    #endregion
+
+    #region ChromeDriver Management
+    
+    /// <summary>
+    /// راه‌اندازی ChromeDriver و تنظیم سرویس شبکه
+    /// </summary>
+    /// <returns>Task برای عملیات ناهمزمان</returns>
     private async Task InitializeChromeDriverAsync()
     {
         try
         {
+            // ایجاد نمونه ChromeDriver
             _driver = await _chromeDriverService.CreateDriverAsync();
 
-            var devTools = _driver.GetDevToolsSession();
-            var domains = devTools.GetVersionSpecificDomains<OpenQA.Selenium.DevTools.V120.DevToolsSessionDomains>();
-            
-            domains.Network.ResponseReceived += (sender, e) => 
-            {
-                try
-                {
-                    var request = _requests.FirstOrDefault(r => r.Url == e.Response.Url);
-                    if (request != null)
-                    {
-                        request.ResponseHeaders = e.Response.Headers.ToString();
-                        request.StatusCode = (int)e.Response.Status;
-                        request.ContentType = e.Response.MimeType;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, "خطا در پردازش پاسخ درخواست");
-                }
-            };
-
-            domains.Network.RequestWillBeSent += (sender, e) =>
-            {
-                try
-                {
-                    var request = new RequestInfo
-                    {
-                        Url = e.Request.Url,
-                        Method = e.Request.Method,
-                        RequestHeaders = e.Request.Headers.ToString(),
-                        Timestamp = DateTime.Now
-                    };
-
-                    this.Invoke(() =>
-                    {
-                        _requests.Add(request);
-                        requestsDataGridView.DataSource = _requests;
-                    });
-                }
-                catch (Exception ex)
-                {
-                    _logger.Error(ex, "خطا در پردازش درخواست");
-                }
-            };
+            // راه‌اندازی سرویس شبکه
+            await _networkService.InitializeAsync(_driver);
 
             _logger.Information("ChromeDriver با موفقیت راه‌اندازی شد");
         }
@@ -224,13 +301,45 @@ public partial class MainForm : Form
             throw;
         }
     }
+    
+    #endregion
 
-    private void MainForm_FormClosing(object sender, FormClosingEventArgs e)
+    #region Network Service Events
+    
+    /// <summary>
+    /// تنظیم رویدادهای سرویس شبکه
+    /// </summary>
+    private void SetupNetworkServiceEvents()
     {
-        _driver?.Quit();
-        _driver?.Dispose();
-    }
+        // رویداد اضافه شدن درخواست جدید
+        _networkService.RequestAdded += (sender, request) =>
+        {
+            this.Invoke(() =>
+            {
+                _requests.Add(request);
+                requestsDataGridView.DataSource = _requests;
+            });
+        };
 
+        // رویداد به‌روزرسانی درخواست
+        _networkService.RequestUpdated += (sender, request) =>
+        {
+            this.Invoke(() =>
+            {
+                // به‌روزرسانی نمایش جدول
+                requestsDataGridView.Refresh();
+            });
+        };
+    }
+    
+    #endregion
+
+    #region Request Management
+    
+    /// <summary>
+    /// دریافت درخواست انتخاب شده از جدول
+    /// </summary>
+    /// <returns>درخواست انتخاب شده یا null در صورت عدم انتخاب</returns>
     private RequestInfo? GetSelectedRequest()
     {
         if (requestsDataGridView.SelectedRows.Count > 0)
@@ -240,6 +349,12 @@ public partial class MainForm : Form
         return null;
     }
 
+    /// <summary>
+    /// رویداد تغییر انتخاب در جدول درخواست‌ها
+    /// به‌روزرسانی نمایش جزئیات درخواست انتخاب شده
+    /// </summary>
+    /// <param name="sender">فرستنده رویداد</param>
+    /// <param name="e">اطلاعات رویداد</param>
     private void requestsDataGridView_SelectionChanged(object sender, EventArgs e)
     {
         if (requestsDataGridView.SelectedRows.Count > 0)
@@ -249,24 +364,53 @@ public partial class MainForm : Form
         }
     }
 
+    /// <summary>
+    /// به‌روزرسانی نمایش جزئیات درخواست
+    /// نمایش اطلاعات کامل درخواست و پاسخ در فرمت‌های مختلف
+    /// </summary>
+    /// <param name="request">درخواست برای نمایش جزئیات</param>
     private void UpdateRequestDetails(RequestInfo? request)
     {
+        // بررسی وجود درخواست
         if (request == null)
         {
             requestDetailsTextBox.Text = string.Empty;
             return;
         }
 
+        // نمایش در فرمت متنی
         if (radioButtonText.Checked)
         {
-            requestDetailsTextBox.Text = $"URL: {request.Url}\n" +
-                                       $"Method: {request.Method}\n" +
-                                       $"Status: {request.StatusCode}\n" +
-                                       $"Content-Type: {request.ContentType}\n\n" +
-                                       $"Request Headers:\n{request.RequestHeaders ?? "-"}\n\n" +
-                                       $"Response Headers:\n{request.ResponseHeaders ?? "-"}\n\n" +
-                                       $"Response Body:\n{request.ResponseBody ?? "-"}";
+            var details = new StringBuilder();
+            
+            // بخش درخواست
+            details.AppendLine($"=== REQUEST ===");
+            details.AppendLine($"URL: {request.Url}");
+            details.AppendLine($"Method: {request.Method}");
+            details.AppendLine($"Timestamp: {request.Timestamp:yyyy-MM-dd HH:mm:ss}");
+            details.AppendLine($"Request Headers:");
+            details.AppendLine(request.RequestHeaders ?? "-");
+            if (!string.IsNullOrEmpty(request.RequestBody))
+            {
+                details.AppendLine($"Request Body:");
+                details.AppendLine(request.RequestBody);
+            }
+            
+            // بخش پاسخ
+            details.AppendLine($"\n=== RESPONSE ===");
+            details.AppendLine($"Status: {request.StatusCode}");
+            details.AppendLine($"Content-Type: {request.ContentType}");
+            details.AppendLine($"Response Headers:");
+            details.AppendLine(request.ResponseHeaders ?? "-");
+            if (!string.IsNullOrEmpty(request.ResponseBody))
+            {
+                details.AppendLine($"Response Body:");
+                details.AppendLine(request.ResponseBody);
+            }
+            
+            requestDetailsTextBox.Text = details.ToString();
         }
+        // نمایش در فرمت JSON
         else if (radioButtonJson.Checked)
         {
             try
@@ -277,9 +421,11 @@ public partial class MainForm : Form
                     request.Method,
                     request.StatusCode,
                     request.ContentType,
-                    request.RequestHeaders,
-                    request.ResponseHeaders,
-                    request.ResponseBody
+                    request.Timestamp,
+                    RequestHeaders = request.RequestHeaders,
+                    RequestBody = request.RequestBody,
+                    ResponseHeaders = request.ResponseHeaders,
+                    ResponseBody = request.ResponseBody
                 }, Formatting.Indented);
                 requestDetailsTextBox.Text = json;
             }
@@ -288,9 +434,12 @@ public partial class MainForm : Form
                 requestDetailsTextBox.Text = "Error formatting as JSON";
             }
         }
+        // نمایش در فرمت HTML
         else // HTML
         {
             requestDetailsTextBox.Text = request.ResponseBody ?? string.Empty;
         }
     }
+    
+    #endregion
 }
