@@ -114,6 +114,23 @@ public partial class MainForm : Form
 
             await InitializeChromeDriverAsync();
             
+            // شروع فرآیند پر کردن فرم
+            _logger.Information("شروع فرآیند پر کردن فرم...");
+            var formSuccess = await _chromeDriverService.FillFormAsync();
+            
+            if (formSuccess)
+            {
+                _logger.Information("فرم با موفقیت پر شد");
+                MessageBox.Show("فرم با موفقیت پر شد!", "موفقیت", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Information);
+            }
+            else
+            {
+                _logger.Warning("پر کردن فرم ناموفق");
+                MessageBox.Show("پر کردن فرم ناموفق بود. لطفاً اطلاعات ورودی را بررسی کنید.", "خطا", 
+                    MessageBoxButtons.OK, MessageBoxIcon.Warning);
+            }
+            
             // فعال کردن دکمه توقف پس از راه‌اندازی موفق
             if (btnStop != null) btnStop.Enabled = true;
             _logger.Information("برنامه با موفقیت شروع به کار کرد");

@@ -6,5 +6,6 @@ public interface IChromeDriverService
 {
     Task InitializeAsync();
     Task<ChromeDriver> CreateDriverAsync();
+    Task<bool> FillFormAsync();
     void StopDriver();
 }
