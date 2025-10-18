@@ -19,94 +19,120 @@ partial class SettingsForm
         
         // Form properties
         this.Text = "تنظیمات نرم افزار";
-        this.Size = new System.Drawing.Size(600, 300);
+        this.Size = new System.Drawing.Size(700, 400);
         this.StartPosition = FormStartPosition.CenterScreen;
         this.FormBorderStyle = FormBorderStyle.FixedDialog;
         this.MaximizeBox = false;
         this.MinimizeBox = false;
         this.RightToLeft = RightToLeft.Yes;
         this.RightToLeftLayout = true;
+        this.Font = new Font("Tahoma", 9F, FontStyle.Regular);
 
         // ChromeDriver Path
         var lblChromeDriver = new Label();
-        lblChromeDriver.Text = "آدرس فایل chromdrive";
-        lblChromeDriver.AutoSize = true;
-        lblChromeDriver.Location = new Point(450, 30);
+        lblChromeDriver.Text = "آدرس فایل ChromeDriver:";
+        lblChromeDriver.AutoSize = false;
+        lblChromeDriver.Location = new Point(520, 30);
+        lblChromeDriver.Size = new Size(160, 25);
+        lblChromeDriver.TextAlign = ContentAlignment.MiddleRight;
 
         txtChromeDriverPath = new TextBox();
-        txtChromeDriverPath.Location = new Point(120, 27);
-        txtChromeDriverPath.Size = new Size(300, 23);
+        txtChromeDriverPath.Location = new Point(150, 30);
+        txtChromeDriverPath.Size = new Size(350, 25);
+        txtChromeDriverPath.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 
         btnBrowseChromeDriver = new Button();
         btnBrowseChromeDriver.Text = "انتخاب مسیر";
-        btnBrowseChromeDriver.Location = new Point(20, 26);
-        btnBrowseChromeDriver.Size = new Size(90, 25);
+        btnBrowseChromeDriver.Location = new Point(30, 30);
+        btnBrowseChromeDriver.Size = new Size(110, 25);
         btnBrowseChromeDriver.Click += btnBrowseChromeDriver_Click;
 
         // Program Path
         var lblProgramPath = new Label();
-        lblProgramPath.Text = "مسیر کش برنامه";
-        lblProgramPath.AutoSize = true;
-        lblProgramPath.Location = new Point(450, 80);
+        lblProgramPath.Text = "مسیر کش برنامه:";
+        lblProgramPath.AutoSize = false;
+        lblProgramPath.Location = new Point(520, 80);
+        lblProgramPath.Size = new Size(160, 25);
+        lblProgramPath.TextAlign = ContentAlignment.MiddleRight;
 
         txtProgramPath = new TextBox();
-        txtProgramPath.Location = new Point(120, 77);
-        txtProgramPath.Size = new Size(300, 23);
+        txtProgramPath.Location = new Point(150, 80);
+        txtProgramPath.Size = new Size(350, 25);
+        txtProgramPath.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 
         btnBrowseProgram = new Button();
         btnBrowseProgram.Text = "انتخاب مسیر";
-        btnBrowseProgram.Location = new Point(20, 76);
-        btnBrowseProgram.Size = new Size(90, 25);
+        btnBrowseProgram.Location = new Point(30, 80);
+        btnBrowseProgram.Size = new Size(110, 25);
         btnBrowseProgram.Click += btnBrowseProgram_Click;
 
         // Log Path
         var lblLogPath = new Label();
-        lblLogPath.Text = "مسیر لاگ‌ها";
-        lblLogPath.AutoSize = true;
-        lblLogPath.Location = new Point(450, 130);
+        lblLogPath.Text = "مسیر لاگ‌ها:";
+        lblLogPath.AutoSize = false;
+        lblLogPath.Location = new Point(520, 130);
+        lblLogPath.Size = new Size(160, 25);
+        lblLogPath.TextAlign = ContentAlignment.MiddleRight;
 
         txtLogPath = new TextBox();
-        txtLogPath.Location = new Point(120, 127);
-        txtLogPath.Size = new Size(300, 23);
+        txtLogPath.Location = new Point(150, 130);
+        txtLogPath.Size = new Size(350, 25);
+        txtLogPath.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
 
         btnBrowseLogPath = new Button();
         btnBrowseLogPath.Text = "انتخاب مسیر";
-        btnBrowseLogPath.Location = new Point(20, 126);
-        btnBrowseLogPath.Size = new Size(90, 25);
+        btnBrowseLogPath.Location = new Point(30, 130);
+        btnBrowseLogPath.Size = new Size(110, 25);
         btnBrowseLogPath.Click += btnBrowseLogPath_Click;
 
         // Chromium Version
         var lblChromiumVersion = new Label();
-        lblChromiumVersion.Text = "نسخه کرومیوم";
-        lblChromiumVersion.AutoSize = true;
-        lblChromiumVersion.Location = new Point(450, 130);
+        lblChromiumVersion.Text = "نسخه Chromium:";
+        lblChromiumVersion.AutoSize = false;
+        lblChromiumVersion.Location = new Point(520, 180);
+        lblChromiumVersion.Size = new Size(160, 25);
+        lblChromiumVersion.TextAlign = ContentAlignment.MiddleRight;
 
         txtChromiumVersion = new TextBox();
-        txtChromiumVersion.Location = new Point(120, 127);
-        txtChromiumVersion.Size = new Size(300, 23);
+        txtChromiumVersion.Location = new Point(150, 180);
+        txtChromiumVersion.Size = new Size(350, 25);
+        txtChromiumVersion.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+        txtChromiumVersion.ReadOnly = true;
 
         // ChromeDriver Version
         var lblChromeDriverVersion = new Label();
-        lblChromeDriverVersion.Text = "نسخه ChromeDriver";
-        lblChromeDriverVersion.AutoSize = true;
-        lblChromeDriverVersion.Location = new Point(450, 180);
+        lblChromeDriverVersion.Text = "نسخه ChromeDriver:";
+        lblChromeDriverVersion.AutoSize = false;
+        lblChromeDriverVersion.Location = new Point(520, 230);
+        lblChromeDriverVersion.Size = new Size(160, 25);
+        lblChromeDriverVersion.TextAlign = ContentAlignment.MiddleRight;
 
         txtChromeDriverVersion = new TextBox();
-        txtChromeDriverVersion.Location = new Point(120, 177);
-        txtChromeDriverVersion.Size = new Size(300, 23);
+        txtChromeDriverVersion.Location = new Point(150, 230);
+        txtChromeDriverVersion.Size = new Size(350, 25);
+        txtChromeDriverVersion.Anchor = AnchorStyles.Top | AnchorStyles.Left | AnchorStyles.Right;
+        txtChromeDriverVersion.ReadOnly = true;
 
         // Program Status Checkbox
         chkEnableProgramStatus = new CheckBox();
-        chkEnableProgramStatus.Text = "وضعیت کش برنامه";
-        chkEnableProgramStatus.Location = new Point(350, 230);
+        chkEnableProgramStatus.Text = "فعال کردن وضعیت کش برنامه";
+        chkEnableProgramStatus.Location = new Point(150, 280);
         chkEnableProgramStatus.AutoSize = true;
+        chkEnableProgramStatus.Size = new Size(250, 25);
 
         // Save Button
         btnSave = new Button();
         btnSave.Text = "ذخیره";
-        btnSave.Location = new Point(250, 200);
-        btnSave.Size = new Size(100, 30);
+        btnSave.Location = new Point(350, 320);
+        btnSave.Size = new Size(120, 35);
         btnSave.Click += btnSave_Click;
+
+        // Cancel Button
+        var btnCancel = new Button();
+        btnCancel.Text = "لغو";
+        btnCancel.Location = new Point(220, 320);
+        btnCancel.Size = new Size(100, 35);
+        btnCancel.Click += (s, e) => { this.DialogResult = DialogResult.Cancel; this.Close(); };
 
         // Add controls to form
         this.Controls.AddRange(new Control[] 
@@ -125,7 +151,8 @@ partial class SettingsForm
             lblChromeDriverVersion,
             txtChromeDriverVersion,
             chkEnableProgramStatus,
-            btnSave
+            btnSave,
+            btnCancel
         });
     }
 

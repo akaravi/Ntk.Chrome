@@ -74,9 +74,57 @@ public class CustomChromeDriverService : IChromeDriverService
             if (shouldDownload)
             {
                 interydata.Information("شروع دانلود و نصب Chromium و ChromeDriver...");
-                await DownloadChromiumAsync();
-                await DownloadChromeDriverAsync();
-                interydata.Information("دانلود و نصب با موفقیت انجام شد");
+                
+                // تلاش برای دانلود با مدیریت خطا
+                try
+                {
+                    await DownloadChromiumAsync();
+                    await DownloadChromeDriverAsync();
+                    interydata.Information("دانلود و نصب با موفقیت انجام شد");
+                }
+                catch (Exception downloadEx)
+                {
+                    interydata.Warning($"خطا در دانلود: {downloadEx.Message}");
+                    interydata.Information("تلاش برای استفاده از فایل‌های موجود...");
+                    
+                    // بررسی وجود فایل‌های آرشیو
+                    var chromiumArchive = Path.Combine(_driverPath, "chromium", "archive", $"chromium-{_chromiumVersion}.zip");
+                    var driverArchive = Path.Combine(_driverPath, "driver", "archive", $"chromedriver-{_chromeDriverVersion}.zip");
+                    
+                    if (File.Exists(chromiumArchive))
+                    {
+                        interydata.Information("استفاده از فایل آرشیو Chromium...");
+                        await ExtractFromArchiveAsync(chromiumArchive, Path.Combine(_driverPath, "chromium"));
+                    }
+                    
+                    if (File.Exists(driverArchive))
+                    {
+                        interydata.Information("استفاده از فایل آرشیو ChromeDriver...");
+                        await ExtractFromArchiveAsync(driverArchive, Path.Combine(_driverPath, "driver"));
+                    }
+                    
+                    // بررسی نهایی وجود فایل‌ها
+                    if (!File.Exists(chromiumPath) || !File.Exists(driverPath))
+                    {
+                        var result = MessageBox.Show(
+                            "خطا در دانلود Chromium و ChromeDriver.\n" +
+                            "آیا می‌خواهید از Chrome نصب شده در سیستم استفاده کنید؟\n" +
+                            "(این ممکن است باعث مشکلات سازگاری شود)",
+                            "خطا در دانلود",
+                            MessageBoxButtons.YesNo,
+                            MessageBoxIcon.Warning);
+                        
+                        if (result == DialogResult.Yes)
+                        {
+                            interydata.Information("استفاده از Chrome سیستم...");
+                            // در این حالت، ChromeDriver از Chrome سیستم استفاده خواهد کرد
+                        }
+                        else
+                        {
+                            throw new InvalidOperationException("نمی‌توان Chromium و ChromeDriver را راه‌اندازی کرد");
+                        }
+                    }
+                }
             }
         }
         catch (Exception ex)
@@ -263,7 +311,13 @@ public class CustomChromeDriverService : IChromeDriverService
                 if (!File.Exists(zipPath))
                 {
                     interydata.Information($"شروع دانلود Chromium از آدرس: {downloadUrl}");
-                    await client.DownloadFileAsync(downloadUrl, zipPath, interydata);
+                    
+                    // تلاش برای دانلود با retry
+                    var downloadSuccess = await TryDownloadWithRetryAsync(downloadUrl, zipPath);
+                    if (!downloadSuccess)
+                    {
+                        throw new HttpRequestException("دانلود Chromium ناموفق بود");
+                    }
                     interydata.Information("Chromium با موفقیت دانلود شد");
                 }
                 else
@@ -513,7 +567,13 @@ public class CustomChromeDriverService : IChromeDriverService
             if (!File.Exists(zipPath))
             {
                 interydata.Information($"شروع دانلود ChromeDriver از آدرس: {downloadUrl}");
-                await client.DownloadFileAsync(downloadUrl, zipPath, interydata);
+                
+                // تلاش برای دانلود با retry
+                var downloadSuccess = await TryDownloadWithRetryAsync(downloadUrl, zipPath);
+                if (!downloadSuccess)
+                {
+                    throw new HttpRequestException("دانلود ChromeDriver ناموفق بود");
+                }
                 interydata.Information("ChromeDriver با موفقیت دانلود شد");
             }
             else
@@ -561,6 +621,53 @@ public class CustomChromeDriverService : IChromeDriverService
         }
     }
 
+    private async Task ExtractFromArchiveAsync(string archivePath, string extractPath)
+    {
+        try
+        {
+            interydata.Information($"استخراج از آرشیو: {archivePath}");
+            Directory.CreateDirectory(extractPath);
+            ZipFile.ExtractToDirectory(archivePath, extractPath, true);
+            interydata.Information("استخراج با موفقیت انجام شد");
+        }
+        catch (Exception ex)
+        {
+            interydata.Error(ex, "خطا در استخراج از آرشیو");
+            throw;
+        }
+    }
+
+    private async Task<bool> TryDownloadWithRetryAsync(string url, string filePath, int maxRetries = 3)
+    {
+        for (int attempt = 1; attempt <= maxRetries; attempt++)
+        {
+            try
+            {
+                interydata.Information($"تلاش {attempt} از {maxRetries} برای دانلود: {url}");
+                
+                using var client = new HttpClient();
+                client.Timeout = TimeSpan.FromMinutes(10); // افزایش timeout
+                
+                // اضافه کردن User-Agent برای جلوگیری از مسدود شدن
+                client.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+                
+                await client.DownloadFileAsync(url, filePath, interydata);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                interydata.Warning($"خطا در تلاش {attempt}: {ex.Message}");
+                if (attempt < maxRetries)
+                {
+                    var delay = TimeSpan.FromSeconds(Math.Pow(2, attempt)); // Exponential backoff
+                    interydata.Information($"صبر {delay.TotalSeconds} ثانیه قبل از تلاش بعدی...");
+                    await Task.Delay(delay);
+                }
+            }
+        }
+        return false;
+    }
+
     private string GetLatestChromeDriverVersion()
     {
         try
@@ -605,9 +712,33 @@ public class CustomChromeDriverService : IChromeDriverService
             if (!File.Exists(chromiumPath))
                 chromiumPath = Path.Combine(_driverPath, "chromium", "chrome-win64", "chrome.exe");
 
+            // اگر Chromium دانلود شده موجود نیست، از Chrome سیستم استفاده می‌کنیم
             if (!File.Exists(chromiumPath))
             {
-                throw new InvalidOperationException($"Chromium در مسیر {chromiumPath} یافت نشد. لطفاً برنامه را مجدداً راه‌اندازی کنید.");
+                interydata.Warning($"Chromium در مسیر {chromiumPath} یافت نشد");
+                
+                // بررسی وجود Chrome در مسیرهای معمول
+                var systemChromePaths = new[]
+                {
+                    @"C:\Program Files\Google\Chrome\Application\chrome.exe",
+                    @"C:\Program Files (x86)\Google\Chrome\Application\chrome.exe",
+                    Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), @"Google\Chrome\Application\chrome.exe")
+                };
+
+                foreach (var path in systemChromePaths)
+                {
+                    if (File.Exists(path))
+                    {
+                        chromiumPath = path;
+                        interydata.Information($"استفاده از Chrome سیستم: {chromiumPath}");
+                        break;
+                    }
+                }
+
+                if (!File.Exists(chromiumPath))
+                {
+                    throw new InvalidOperationException($"Chromium یا Chrome در هیچ یک از مسیرهای معمول یافت نشد. لطفاً Chrome را نصب کنید یا برنامه را مجدداً راه‌اندازی کنید.");
+                }
             }
 
             var options = new ChromeOptions();
