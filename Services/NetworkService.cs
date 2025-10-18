@@ -40,6 +40,11 @@ public class NetworkService : INetworkService
     /// </summary>
     public event EventHandler<RequestInfo>? RequestUpdated;
     
+    /// <summary>
+    /// تنظیمات نظارت بر URL ها
+    /// </summary>
+    private List<UrlMonitoringConfig> _urlMonitoringConfigs = new();
+    
     #endregion
 
     #region Constructor
@@ -87,6 +92,9 @@ public class NetworkService : INetworkService
                 HandleRequestWillBeSent(e);
             };
 
+            // بارگذاری تنظیمات نظارت بر URL
+            await LoadUrlMonitoringConfigAsync();
+            
             _logger.Information("سرویس شبکه با موفقیت راه‌اندازی شد");
         }
         catch (Exception ex)
@@ -202,15 +210,18 @@ public class NetworkService : INetworkService
                         await Task.Delay(100); // تاخیر کوتاه برای اطمینان از تکمیل پاسخ
                         await GetResponseBodyAsync(request, e.RequestId);
                         
-                        // اطلاع‌رسانی مجدد به UI پس از دریافت Response Body
-                        RequestUpdated?.Invoke(this, request);
-                    });
+                    // اطلاع‌رسانی مجدد به UI پس از دریافت Response Body
+                    RequestUpdated?.Invoke(this, request);
                     
-                    // فقط پاسخ صفحات اصلی را در لاگ نمایش دهید
-                    if (IsMainPageRequest(e.Response.Url))
-                    {
-                        _logger.Information($"پاسخ دریافت شد: {request.StatusCode} {request.Url}");
-                    }
+                    // بررسی نظارت بر URL
+                    await CheckUrlMonitoringAsync(request);
+                });
+                
+                // فقط پاسخ صفحات اصلی را در لاگ نمایش دهید
+                if (IsMainPageRequest(e.Response.Url))
+                {
+                    _logger.Information($"پاسخ دریافت شد: {request.StatusCode} {request.Url}");
+                }
                 }
             }
             catch (Exception ex)
@@ -353,6 +364,224 @@ public class NetworkService : INetworkService
         }
         
         return headerList.Count > 0 ? string.Join("\n", headerList) : "No headers available";
+    }
+    
+    /// <summary>
+    /// بارگذاری تنظیمات نظارت بر URL از فایل تنظیمات
+    /// </summary>
+    private async Task LoadUrlMonitoringConfigAsync()
+    {
+        try
+        {
+            if (File.Exists("website_settings.json"))
+            {
+                var settingsJson = await File.ReadAllTextAsync("website_settings.json");
+                var settings = Newtonsoft.Json.JsonConvert.DeserializeObject<WebsiteSettings>(settingsJson);
+                
+                if (settings?.UrlMonitoring != null)
+                {
+                    _urlMonitoringConfigs = settings.UrlMonitoring;
+                    _logger.Information($"تنظیمات نظارت بر {_urlMonitoringConfigs.Count} URL بارگذاری شد");
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "خطا در بارگذاری تنظیمات نظارت بر URL");
+        }
+    }
+    
+    /// <summary>
+    /// بررسی و نظارت بر URL های پیکربندی شده
+    /// </summary>
+    /// <param name="request">درخواست دریافتی</param>
+    private async Task CheckUrlMonitoringAsync(RequestInfo request)
+    {
+        try
+        {
+            foreach (var config in _urlMonitoringConfigs)
+            {
+                if (request.Url.Contains(config.Url, StringComparison.OrdinalIgnoreCase))
+                {
+                    await ProcessMonitoredUrlAsync(config, request);
+                    break;
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "خطا در بررسی نظارت بر URL");
+        }
+    }
+    
+    /// <summary>
+    /// پردازش URL نظارت شده و نمایش نتایج
+    /// </summary>
+    /// <param name="config">تنظیمات نظارت</param>
+    /// <param name="request">درخواست دریافتی</param>
+    private async Task ProcessMonitoredUrlAsync(UrlMonitoringConfig config, RequestInfo request)
+    {
+        try
+        {
+            var parameters = ExtractParametersFromResponse(request, config.Parameters);
+            var message = BuildMonitoringMessage(config, parameters, request);
+            
+            // لاگ‌گیری
+            _logger.Information($"🔍 URL Monitoring: {config.Name}");
+            _logger.Information(message);
+            
+            // نمایش پاپ‌آپ
+            if (config.ShowPopup)
+            {
+                ShowMonitoringPopup(config.PopupTitle, message, request);
+            }
+            
+            // ذخیره در فایل لاگ
+            if (config.LogToFile)
+            {
+                await LogMonitoringToFileAsync(config.Name, message, request);
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, $"خطا در پردازش URL نظارت شده: {config.Name}");
+        }
+    }
+    
+    /// <summary>
+    /// استخراج پارامترها از پاسخ دریافتی
+    /// </summary>
+    /// <param name="request">درخواست</param>
+    /// <param name="parameters">پارامترهای تعریف شده</param>
+    /// <returns>فهرست پارامترهای استخراج شده</returns>
+    private Dictionary<string, string> ExtractParametersFromResponse(RequestInfo request, List<MonitoringParameter> parameters)
+    {
+        var extractedParams = new Dictionary<string, string>();
+        
+        try
+        {
+            if (!string.IsNullOrEmpty(request.ResponseBody))
+            {
+                // تلاش برای پارس کردن JSON
+                var jsonResponse = Newtonsoft.Json.JsonConvert.DeserializeObject<Dictionary<string, object>>(request.ResponseBody);
+                
+                if (jsonResponse != null)
+                {
+                    foreach (var param in parameters)
+                    {
+                        if (jsonResponse.ContainsKey(param.Name))
+                        {
+                            extractedParams[param.Name] = jsonResponse[param.Name]?.ToString() ?? "N/A";
+                        }
+                        else if (param.Required)
+                        {
+                            extractedParams[param.Name] = "MISSING (Required)";
+                        }
+                        else
+                        {
+                            extractedParams[param.Name] = "Not Found";
+                        }
+                    }
+                }
+            }
+            else
+            {
+                foreach (var param in parameters)
+                {
+                    extractedParams[param.Name] = "No Response Body";
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.Warning($"خطا در استخراج پارامترها: {ex.Message}");
+            foreach (var param in parameters)
+            {
+                extractedParams[param.Name] = "Parse Error";
+            }
+        }
+        
+        return extractedParams;
+    }
+    
+    /// <summary>
+    /// ساخت پیام نظارت
+    /// </summary>
+    /// <param name="config">تنظیمات نظارت</param>
+    /// <param name="parameters">پارامترهای استخراج شده</param>
+    /// <param name="request">درخواست</param>
+    /// <returns>پیام فرمت شده</returns>
+    private string BuildMonitoringMessage(UrlMonitoringConfig config, Dictionary<string, string> parameters, RequestInfo request)
+    {
+        var message = new System.Text.StringBuilder();
+        message.AppendLine($"📊 {config.Name}");
+        message.AppendLine($"🌐 URL: {request.Url}");
+        message.AppendLine($"📅 Time: {request.Timestamp:yyyy-MM-dd HH:mm:ss}");
+        message.AppendLine($"📈 Status: {request.StatusCode}");
+        message.AppendLine();
+        
+        message.AppendLine("📋 Parameters:");
+        foreach (var param in config.Parameters)
+        {
+            var value = parameters.ContainsKey(param.Name) ? parameters[param.Name] : "N/A";
+            var status = param.Required && value == "MISSING (Required)" ? "❌" : "✅";
+            message.AppendLine($"  {status} {param.Name}: {value}");
+            if (!string.IsNullOrEmpty(param.Description))
+            {
+                message.AppendLine($"    💡 {param.Description}");
+            }
+        }
+        
+        return message.ToString();
+    }
+    
+    /// <summary>
+    /// نمایش پاپ‌آپ نظارت
+    /// </summary>
+    /// <param name="title">عنوان پاپ‌آپ</param>
+    /// <param name="message">پیام</param>
+    /// <param name="request">درخواست</param>
+    private void ShowMonitoringPopup(string title, string message, RequestInfo request)
+    {
+        try
+        {
+            // نمایش پاپ‌آپ در thread اصلی UI
+            System.Windows.Forms.MessageBox.Show(
+                message,
+                title,
+                System.Windows.Forms.MessageBoxButtons.OK,
+                System.Windows.Forms.MessageBoxIcon.Information);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "خطا در نمایش پاپ‌آپ نظارت");
+        }
+    }
+    
+    /// <summary>
+    /// ذخیره اطلاعات نظارت در فایل لاگ
+    /// </summary>
+    /// <param name="configName">نام تنظیمات</param>
+    /// <param name="message">پیام</param>
+    /// <param name="request">درخواست</param>
+    private async Task LogMonitoringToFileAsync(string configName, string message, RequestInfo request)
+    {
+        try
+        {
+            var logDirectory = Path.Combine("logs", "url-monitoring");
+            Directory.CreateDirectory(logDirectory);
+            
+            var logFileName = $"{configName.Replace(" ", "_")}_{DateTime.Now:yyyy-MM-dd}.log";
+            var logFilePath = Path.Combine(logDirectory, logFileName);
+            
+            var logEntry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] {configName}\n{message}\n{'=' * 80}\n\n";
+            
+            await File.AppendAllTextAsync(logFilePath, logEntry);
+        }
+        catch (Exception ex)
+        {
+            _logger.Error(ex, "خطا در ذخیره لاگ نظارت در فایل");
+        }
     }
     
     #endregion
