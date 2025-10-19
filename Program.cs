@@ -3,9 +3,16 @@ namespace Ntk.Chrome;
 static class Program
 {
     [STAThread]
-    static void Main()
+    static async Task Main()
     {
-        ApplicationConfiguration.Initialize();
-        Application.Run(new Forms.MainForm());
+        //ApplicationConfiguration.Initialize();
+        //Application.Run(new Forms.MainForm());
+        // Run TestDecrypt instead of the main form
+        var testDecrypt = new TestDecrypt();
+        await testDecrypt.RunDecryptionTest();
+
+        // Keep console open to see results
+        Console.WriteLine("\nPress any key to exit...");
+        Console.ReadKey();
     }
 }

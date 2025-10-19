@@ -1,5 +1,6 @@
 using Newtonsoft.Json;
 using Ntk.Chrome.Models;
+using Ntk.Chrome.Services;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
 using OpenQA.Selenium.DevTools;
@@ -25,6 +26,11 @@ public partial class TestForm : Form
 
     public TestForm(Services.ILogger logger, Services.IChromeDriverService chromeDriverService)
     {
+
+        var test= new ApiTestLogin();
+        var retLog = test.LoginAsync("1287677843", "Am7677843", "4002016");
+
+
         _logger = logger;
         _chromeDriverService = chromeDriverService;
         InitializeComponent();
@@ -876,30 +882,39 @@ public partial class TestForm : Form
             var REACT_APP_PUBLIC_KEY = "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAxo9gBgRy4bpZcl+d74hrU8LH9EiIEbOCnrCSWyqFUYMYLbROeEiigX1vGb/ntdIDda3+pWN0JlbwQ/bKxWtpJiDFGC6i3PmyV+5mBPA+EVMVxIyW0frZqlrVVTnCmnZKLbgp/UM9wf167GopGaZhgqdkITa0+KxSzWRGg5KXzNHu80HWICSsVkMiC5weVte8t30o32qYhqc3Csk5Yiz1osAaQiwSD/SgEnMqlH5TCAvYdJ98aKQkfIeyOUwaFegDM5MkSv27Gnq7/dkMXW/pPmL7k59UiFphuFWQ/dEMAmf4y7wlboW6JVr9eTX7Dj4rofgS95Xi1A9wTKpRySTbDQIDAQAB";
             var REACT_APP_PRIVATE_KEY = "MIIEvQIBADANBgkqhkiG9w0BAQEFAASCBKcwggSjAgEAAoIBAQCzJ8PwsGzhdDz+PwewygYAzCUy/VPU3rJ0ta3jxcTHnuNacxbaQwc9MxgAvJWE1DHcUgNYs3SzoqGifiGxbB7At8YlVgAb5N8fjhjXsc0VN/C+jEaRQGRI/BmyEIpZR8+VSdo6m+0VrTAPkkykF0Bk7gMo07c6hqD/C2442GTtukSUiPaPReHnlHtzTmoCSgeDQP4CO3hEH1c0gEjvunhCqEW9ifZk+RM4JVBeBsPPBz+Uf7R6V0z02KtLEr4eKGxi6UC7MuJr6H82G6kRvlAFLkSi1Etc2f8VihPLsvh9O7yxminPQz1LztnyrgFgfbl53wZJ0WufBVGNmPdHMhfVAgMBAAECggEAJV/eWI/1pvMA5mlvyUncBr6P5BtFKdtrjz13kVTowFw9QdlQoyfokrPeBglRh+xcmoHhgNevOOpsneGCVekgYUP1akSOsUMF6SdTt2u4RPzulFHfRt4QDcnJ8oPQ2N9KRvKpPCDbTPJcXGNA6dqP7H5a2mGQj/0WCR7xV5qNM6qWFK2NLWmP5Iln4PN0z/X0iV26UuKotz3QQjYjrlsRsizWafoMzw4/xVv/V1lRTVO3OX2DoIi71g+BZ1kjqhrydWQAWv70mb2P4lmWdgk8y5lsDz8rN5JQePpRBZ2RMyynBzve6HUMHOFRtfEUGpIlP63i/111Sdk/P2V7jsZM4QKBgQD0ImIdtMRRO6nuTAuoKyMfJrlge0nlDCciDFGBgd9nJuwOMPby/XELnbuzjAFnjnTaVbUKHMfRDp0yBV59Yr0prCZXCkmA80ZoYOlovDfxqoyj809XbBoErsXS0WJAcmJT9nx5VGvRDWSgLevdjnKkCcDUxZuJLKbvAxEahr2/wwKBgQC73ONBNI5/ew8Ey6xnmYjKHZLH6F31mTbU1pMIDnWnjegYkE96eIz+spvbEpIBgHDBkknlRYL4GiYQIzQfHgKeO4I+WBiS4/7uih8P9Q/6M0TC048+HNX/SHSs1OSWxiIrF6KXrr8SB/AE55vBCYATwYw+JpR3zjh3WcI6JO6ohwKBgQDxQTksmgKXNBrNvqCWY2ql0iLHUY7IpqXVY8736FvZGAGWVJT1s7cO/6UJ3YVVzNV1HdV2VNKxqXt2fw/NYNIGaHTK9wOERuSBKaP/OGEglKW/LyZtAgsELaKYnwo1HdRFnQOM8vxI7q9OC5NWsvpfWLQSj+UQPewJrkIssJK6+QKBgCW4cWz7R41zQQ2+c4yNuHiUvY8kKhGRRQAxYW5hsOAGz053U24M3IqbhE3VibmBd6J2ZB4D+gsk/PWKjAGfffkVi85G1BBSdTKiSyBiHWYoeyr/XaikE5fhjYPSb1+SwvOSGFSKgtT1AQ2LD6wP40aUOzuTdYYkwxO70xLnrX/rAoGAdjz/4Xm1N77MJ3U0+xEKIT0pRSJnwQFUykq4X4QvbWBSZ4hObRCT1v4VKB6zlF9B3vfF7CXiyrymr7gDbJzpzUnBZTBYMTaRHRCqEtoZWgkjZbpEPtdPqiTbjTHNgb8e7OfeGjcu+uZAXKPuStni340OFJzrVzZtVoWSyIasEt8=";
 
+            // تعریف salt با مقادیر مشخص شده
+            int[] saltValues = { -177135664, 1888184944 };
+            byte[] salt = ConvertSaltToBytes(saltValues);
+            Console.WriteLine($"Salt: {Convert.ToBase64String(salt)}");
 
             // فرض بر این است که اینجا کلید به صورت باینری وجود دارد.
             byte[] publicKeyBytes = Convert.FromBase64String(REACT_APP_PUBLIC_KEY); // کلید عمومی
             byte[] privateKeyBytes = Convert.FromBase64String(REACT_APP_PRIVATE_KEY); // کلید خصوصی
 
             // وارد کردن کلید عمومی
-            RSA publicKey = ImportPublicKey(publicKeyBytes);
+            using RSA publicKey = ImportPublicKey(publicKeyBytes);
             Console.WriteLine("کلید عمومی وارد شد.");
 
             // وارد کردن کلید خصوصی
-            RSA privateKey = ImportPrivateKey(privateKeyBytes);
+            using RSA privateKey = ImportPrivateKey(privateKeyBytes);
             Console.WriteLine("کلید خصوصی وارد شد.");
 
             // متن ورودی برای رمزنگاری
             string plaintext = "Hello, this is a secret message!";
             Console.WriteLine($"متن ورودی: {plaintext}");
 
+       
+            // ترکیب متن ورودی با salt
+            byte[] saltedPlaintextBytes = Combine(Encoding.UTF8.GetBytes(plaintext), salt);
+
             // رمزنگاری متن
-            byte[] encryptedData = Encrypt(publicKey, plaintext);
+            byte[] encryptedData = Encrypt(publicKey, saltedPlaintextBytes);
             Console.WriteLine($"متن رمزنگاری شده: {Convert.ToBase64String(encryptedData)}");
 
             // رمزگشایی متن
-            string decryptedText = Decrypt(privateKey, encryptedData);
-            Console.WriteLine($"متن رمزگشایی شده: {decryptedText}");
+            byte[] decryptedData = Decrypt(privateKey, encryptedData);
+            Console.WriteLine($"متن رمزگشایی شده: {Encoding.UTF8.GetString(decryptedData)}");
+
 
 
             // رمزگشایی محتوای پاسخ
@@ -920,8 +935,8 @@ public partial class TestForm : Form
        
 
         // رمزگشایی متن
-        string dt = Decrypt(privateKey, edData);
-        Console.WriteLine($"متن رمزگشایی شده: {dt}");
+        //string dt = Decrypt(privateKey, edData);
+        //Console.WriteLine($"متن رمزگشایی شده: {dt}");
             }
         catch (Exception ex)
         {
@@ -1011,35 +1026,6 @@ public partial class TestForm : Form
         }
     }
 
-    // تابع برای وارد کردن کلید عمومی
-    private static RSA ImportPublicKey(byte[] publicKeyBytes)
-    {
-        RSA rsa = RSA.Create(2048);
-        rsa.ImportSubjectPublicKeyInfo(publicKeyBytes, out _); // وارد کردن کلید عمومی
-        return rsa;
-    }
-
-    // تابع برای وارد کردن کلید خصوصی
-    private static RSA ImportPrivateKey(byte[] privateKeyBytes)
-    {
-        RSA rsa = RSA.Create(2048);
-        rsa.ImportPkcs8PrivateKey(privateKeyBytes, out _); // وارد کردن کلید خصوصی
-        return rsa;
-    }
-
-    // تابع برای رمزنگاری متن
-    private static byte[] Encrypt(RSA publicKey, string plaintext)
-    {
-        byte[] plaintextBytes = Encoding.UTF8.GetBytes(plaintext);
-        return publicKey.Encrypt(plaintextBytes, RSAEncryptionPadding.OaepSHA256); // رمزنگاری با استفاده از پدینگ OAEP
-    }
-
-    // تابع برای رمزگشایی متن
-    private static string Decrypt(RSA privateKey, byte[] encryptedData)
-    {
-        byte[] decryptedBytes = privateKey.Decrypt(encryptedData, RSAEncryptionPadding.OaepSHA256); // رمزگشایی با استفاده از پدینگ OAEP
-        return Encoding.UTF8.GetString(decryptedBytes);
-    }
     public class dataModel
     {
        public string? data { get; set; }
@@ -1049,4 +1035,59 @@ public partial class TestForm : Form
     {
         this.Close();
     }
+
+
+
+
+
+
+    // تابع برای وارد کردن کلید عمومی
+    private static RSA ImportPublicKey(byte[] publicKeyBytes)
+    {
+        RSA rsa = RSA.Create();
+        rsa.ImportSubjectPublicKeyInfo(publicKeyBytes, out _); // وارد کردن کلید عمومی
+        return rsa;
+    }
+
+    // تابع برای وارد کردن کلید خصوصی
+    private static RSA ImportPrivateKey(byte[] privateKeyBytes)
+    {
+        RSA rsa = RSA.Create();
+        rsa.ImportPkcs8PrivateKey(privateKeyBytes, out _); // وارد کردن کلید خصوصی
+        return rsa;
+    }
+
+    // تابع برای تبدیل salt به byte array
+    private static byte[] ConvertSaltToBytes(int[] saltValues)
+    {
+        byte[] saltBytes = new byte[saltValues.Length * sizeof(int)];
+        Buffer.BlockCopy(saltValues, 0, saltBytes, 0, saltBytes.Length);
+        return saltBytes;
+    }
+
+    // تابع برای ترکیب متن و Salt
+    private static byte[] Combine(byte[] plaintextBytes, byte[] salt)
+    {
+        byte[] combined = new byte[plaintextBytes.Length + salt.Length];
+        Buffer.BlockCopy(plaintextBytes, 0, combined, 0, plaintextBytes.Length);
+        Buffer.BlockCopy(salt, 0, combined, plaintextBytes.Length, salt.Length);
+        return combined;
+    }
+
+    // تابع برای رمزنگاری متن
+    private static byte[] Encrypt(RSA publicKey, byte[] plaintextBytes)
+    {
+        return publicKey.Encrypt(plaintextBytes, RSAEncryptionPadding.OaepSHA256); // رمزنگاری با استفاده از پدینگ OAEP
+    }
+
+    // تابع برای رمزگشایی متن
+    private static byte[] Decrypt(RSA privateKey, byte[] encryptedData)
+    {
+        return privateKey.Decrypt(encryptedData, RSAEncryptionPadding.OaepSHA256); // رمزگشایی با استفاده از پدینگ OAEP
+    }
+
+
+
+
+
 }
