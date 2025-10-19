@@ -1,1140 +1,769 @@
-/**
- * Clean Login Form Component
- * Extracted and organized from 189.edfe8701.chunk.js
- * 
- * This module contains a comprehensive React login form component
- * with captcha, SMS verification, and password reset functionality.
- */
-
-// ============================================================================
-// CLEAN GENERATOR UTILITIES
-// ============================================================================
-
-/**
- * Clean Generator Function Factory
- * Creates generator functions with proper async/await support
- */
-class CleanGeneratorFactory {
-    constructor() {
-        this.generator = this.createGenerator();
-    }
-
-    /**
-     * Create generator function
-     * @returns {Function} - Generator function
-     */
-    createGenerator() {
-        const self = this;
-        
-        return function() {
-            const generator = self.getGenerator();
-            const { wrap, mark, awrap, AsyncIterator, async, keys, values } = generator;
-            
-            return {
-                wrap: function(genFn, thisArg, _arguments, state) {
-                    return self.wrap(genFn, thisArg, _arguments, state && state.reverse());
-                },
-                isGeneratorFunction: self.isGeneratorFunction,
-                mark: mark,
-                awrap: function(gen, skipTempReset) {
-                    return new CleanAsyncGenerator(gen, skipTempReset);
-                },
-                AsyncIterator: AsyncIterator,
-                async: function(genFn, thisArg, _arguments, state, info) {
-                    return (self.isGeneratorFunction(genFn) ? self.async : function(genFn, thisArg, _arguments, state, info) {
-                        const gen = self.async(genFn, thisArg, _arguments, state, info);
-                        return gen.next().then(function(result) {
-                            return result.done ? result.value : gen.next();
-                        });
-                    })(self.wrap(genFn), thisArg, _arguments, state, info);
-                },
-                keys: keys,
-                values: values
-            };
-        };
-    }
-
-    /**
-     * Get generator instance
-     * @returns {Object} - Generator instance
-     */
-    getGenerator() {
-        const self = this;
-        
-        return {
-            wrap: function(genFn, thisArg, _arguments, state) {
-                return self.wrap(genFn, thisArg, _arguments, state);
-            },
-            mark: self.mark,
-            awrap: function(gen, skipTempReset) {
-                return new CleanAsyncGenerator(gen, skipTempReset);
-            },
-            AsyncIterator: CleanAsyncIterator,
-            async: self.async,
-            keys: self.keys,
-            values: self.values
-        };
-    }
-
-    /**
-     * Check if function is generator function
-     * @param {Function} fn - Function to check
-     * @returns {boolean} - True if generator function
-     */
-    isGeneratorFunction(fn) {
-        const gen = this.getGenerator();
-        const GeneratorFunction = (Object.getPrototypeOf ? Object.getPrototypeOf(gen) : gen.__proto__).constructor;
-        
-        return function(fn) {
-            const constructor = typeof fn === "function" && fn.constructor;
-            return !!constructor && (constructor === GeneratorFunction || "GeneratorFunction" === (constructor.displayName || constructor.name));
-        }(fn);
-    }
-
-    /**
-     * Wrap generator function
-     * @param {Function} genFn - Generator function
-     * @param {Object} thisArg - This argument
-     * @param {Array} _arguments - Arguments
-     * @param {Array} state - State
-     * @returns {Function} - Wrapped function
-     */
-    wrap(genFn, thisArg, _arguments, state) {
-        return this.mark(genFn).call(thisArg, _arguments, state);
-    }
-
-    /**
-     * Mark function as generator
-     * @param {Function} fn - Function to mark
-     * @returns {Function} - Marked function
-     */
-    mark(fn) {
-        return this.setGeneratorFunction(fn);
-    }
-
-    /**
-     * Set generator function
-     * @param {Function} fn - Function to set
-     * @returns {Function} - Generator function
-     */
-    setGeneratorFunction(fn) {
-        const self = this;
-        
-        return function() {
-            return {
-                wrap: function(genFn, thisArg, _arguments, state) {
-                    return self.wrap(genFn, thisArg, _arguments, state);
-                },
-                isGeneratorFunction: self.isGeneratorFunction,
-                mark: self.mark,
-                awrap: function(gen, skipTempReset) {
-                    return new CleanAsyncGenerator(gen, skipTempReset);
-                },
-                AsyncIterator: CleanAsyncIterator,
-                async: self.async,
-                keys: self.keys,
-                values: self.values
-            };
-        };
-    }
-
-    /**
-     * Create async iterator
-     * @param {Function} genFn - Generator function
-     * @param {Promise} promise - Promise
-     * @returns {CleanAsyncIterator} - Async iterator
-     */
-    async(genFn, thisArg, _arguments, state, info) {
-        return new CleanAsyncIterator(this.wrap(genFn), thisArg, _arguments, state, info);
-    }
-
-    /**
-     * Get keys iterator
-     * @param {Object} obj - Object to iterate
-     * @returns {Function} - Keys iterator
-     */
-    keys(obj) {
-        if (obj != null) {
-            const iterator = obj[typeof Symbol !== "undefined" && Symbol.iterator || "@@iterator"];
-            let index = 0;
-            
-            if (iterator) {
-                return iterator.call(obj);
+(window.webpackJsonp = window.webpackJsonp || []).push([[189], {
+    2648: function(t, e, n) {
+        "use strict";
+        n.r(e);
+        var a = n(0)
+          , r = n(15)
+          , o = n(32)
+          , i = n(33)
+          , c = n(35)
+          , s = n(34)
+          , u = n(36)
+          , l = n(148)
+          , f = n(376)
+          , p = n.n(f)
+          , m = n(4)
+          , b = n.n(m)
+          , h = n(2)
+          , g = n.n(h)
+          , d = n(22)
+          , v = n(48)
+          , O = n(37)
+          , j = n(19)
+          , y = n(14)
+          , w = n(7)
+          , S = n(1)
+          , C = n(5)
+          , k = n(275)
+          , E = n(16)
+          , x = n(12)
+          , D = n(43)
+          , N = n(290);
+        function L() {
+            var t = M()
+              , e = t.m(L)
+              , n = (Object.getPrototypeOf ? Object.getPrototypeOf(e) : e.__proto__).constructor;
+            function a(t) {
+                var e = "function" == typeof t && t.constructor;
+                return !!e && (e === n || "GeneratorFunction" === (e.displayName || e.name))
             }
-            
-            if (typeof obj.next === "function") {
-                return obj;
+            var r = {
+                throw: 1,
+                return: 2,
+                break: 3,
+                continue: 3
+            };
+            function o(t) {
+                var e, n;
+                return function(a) {
+                    e || (e = {
+                        stop: function() {
+                            return n(a.a, 2)
+                        },
+                        catch: function() {
+                            return a.v
+                        },
+                        abrupt: function(t, e) {
+                            return n(a.a, r[t], e)
+                        },
+                        delegateYield: function(t, r, o) {
+                            return e.resultName = r,
+                            n(a.d, B(t), o)
+                        },
+                        finish: function(t) {
+                            return n(a.f, t)
+                        }
+                    },
+                    n = function(t, n, r) {
+                        a.p = e.prev,
+                        a.n = e.next;
+                        try {
+                            return t(n, r)
+                        } finally {
+                            e.next = a.n
+                        }
+                    }
+                    ),
+                    e.resultName && (e[e.resultName] = a.v,
+                    e.resultName = void 0),
+                    e.sent = a.v,
+                    e.next = a.n;
+                    try {
+                        return t.call(this, e)
+                    } finally {
+                        a.p = e.prev,
+                        a.n = e.next
+                    }
+                }
             }
-            
-            if (!isNaN(obj.length)) {
+            return (L = function() {
                 return {
-                    next: function() {
-                        if (obj && index >= obj.length) {
-                            obj = undefined;
+                    wrap: function(e, n, a, r) {
+                        return t.w(o(e), n, a, r && r.reverse())
+                    },
+                    isGeneratorFunction: a,
+                    mark: t.m,
+                    awrap: function(t, e) {
+                        return new G(t,e)
+                    },
+                    AsyncIterator: I,
+                    async: function(t, e, n, r, i) {
+                        return (a(e) ? P : function(t, e, n, a, r) {
+                            var o = P(t, e, n, a, r);
+                            return o.next().then(function(t) {
+                                return t.done ? t.value : o.next()
+                            })
+                        }
+                        )(o(t), e, n, r, i)
+                    },
+                    keys: T,
+                    values: B
+                }
+            }
+            )()
+        }
+        function B(t) {
+            if (null != t) {
+                var e = t["function" == typeof Symbol && Symbol.iterator || "@@iterator"]
+                  , n = 0;
+                if (e)
+                    return e.call(t);
+                if ("function" == typeof t.next)
+                    return t;
+                if (!isNaN(t.length))
+                    return {
+                        next: function() {
+                            return t && n >= t.length && (t = void 0),
+                            {
+                                value: t && t[n++],
+                                done: !t
+                            }
+                        }
+                    }
+            }
+            throw new TypeError(typeof t + " is not iterable")
+        }
+        function T(t) {
+            var e = Object(t)
+              , n = [];
+            for (var a in e)
+                n.unshift(a);
+            return function t() {
+                for (; n.length; )
+                    if ((a = n.pop())in e)
+                        return t.value = a,
+                        t.done = !1,
+                        t;
+                return t.done = !0,
+                t
+            }
+        }
+        function P(t, e, n, a, r) {
+            return new I(M().w(t, e, n, a),r || Promise)
+        }
+        function I(t, e) {
+            function n(a, r, o, i) {
+                try {
+                    var c = t[a](r)
+                      , s = c.value;
+                    return s instanceof G ? e.resolve(s.v).then(function(t) {
+                        n("next", t, o, i)
+                    }, function(t) {
+                        n("throw", t, o, i)
+                    }) : e.resolve(s).then(function(t) {
+                        c.value = t,
+                        o(c)
+                    }, function(t) {
+                        return n("throw", t, o, i)
+                    })
+                } catch (t) {
+                    i(t)
+                }
+            }
+            var a;
+            this.next || (F(I.prototype),
+            F(I.prototype, "function" == typeof Symbol && Symbol.asyncIterator || "@asyncIterator", function() {
+                return this
+            })),
+            F(this, "_invoke", function(t, r, o) {
+                function i() {
+                    return new e(function(e, a) {
+                        n(t, o, e, a)
+                    }
+                    )
+                }
+                return a = a ? a.then(i, i) : i()
+            }, !0)
+        }
+        function M() {
+            var t, e, n = "function" == typeof Symbol ? Symbol : {}, a = n.iterator || "@@iterator", r = n.toStringTag || "@@toStringTag";
+            function o(n, a, r, o) {
+                var s = a && a.prototype instanceof c ? a : c
+                  , u = Object.create(s.prototype);
+                return F(u, "_invoke", function(n, a, r) {
+                    var o, c, s, u = 0, l = r || [], f = !1, p = {
+                        p: 0,
+                        n: 0,
+                        v: t,
+                        a: m,
+                        f: m.bind(t, 4),
+                        d: function(e, n) {
+                            return o = e,
+                            c = 0,
+                            s = t,
+                            p.n = n,
+                            i
+                        }
+                    };
+                    function m(n, a) {
+                        for (c = n,
+                        s = a,
+                        e = 0; !f && u && !r && e < l.length; e++) {
+                            var r, o = l[e], m = p.p, b = o[2];
+                            n > 3 ? (r = b === a) && (s = o[(c = o[4]) ? 5 : (c = 3,
+                            3)],
+                            o[4] = o[5] = t) : o[0] <= m && ((r = n < 2 && m < o[1]) ? (c = 0,
+                            p.v = a,
+                            p.n = o[1]) : m < b && (r = n < 3 || o[0] > a || a > b) && (o[4] = n,
+                            o[5] = a,
+                            p.n = b,
+                            c = 0))
+                        }
+                        if (r || n > 1)
+                            return i;
+                        throw f = !0,
+                        a
+                    }
+                    return function(r, l, b) {
+                        if (u > 1)
+                            throw TypeError("Generator is already running");
+                        for (f && 1 === l && m(l, b),
+                        c = l,
+                        s = b; (e = c < 2 ? t : s) || !f; ) {
+                            o || (c ? c < 3 ? (c > 1 && (p.n = -1),
+                            m(c, s)) : p.n = s : p.v = s);
+                            try {
+                                if (u = 2,
+                                o) {
+                                    if (c || (r = "next"),
+                                    e = o[r]) {
+                                        if (!(e = e.call(o, s)))
+                                            throw TypeError("iterator result is not an object");
+                                        if (!e.done)
+                                            return e;
+                                        s = e.value,
+                                        c < 2 && (c = 0)
+                                    } else
+                                        1 === c && (e = o.return) && e.call(o),
+                                        c < 2 && (s = TypeError("The iterator does not provide a '" + r + "' method"),
+                                        c = 1);
+                                    o = t
+                                } else if ((e = (f = p.n < 0) ? s : n.call(a, p)) !== i)
+                                    break
+                            } catch (e) {
+                                o = t,
+                                c = 1,
+                                s = e
+                            } finally {
+                                u = 1
+                            }
                         }
                         return {
-                            value: obj && obj[index++],
-                            done: !obj
-                        };
+                            value: e,
+                            done: f
+                        }
                     }
-                };
+                }(n, r, o), !0),
+                u
             }
-        }
-        
-        throw new TypeError(typeof obj + " is not iterable");
-    }
-
-    /**
-     * Get values iterator
-     * @param {Object} obj - Object to iterate
-     * @returns {Function} - Values iterator
-     */
-    values(obj) {
-        const object = Object(obj);
-        const keys = [];
-        
-        for (const key in object) {
-            keys.unshift(key);
-        }
-        
-        return function() {
-            for (; keys.length;) {
-                const key = keys.pop();
-                if (key in object) {
-                    return {
-                        value: key,
-                        done: false
-                    };
+            var i = {};
+            function c() {}
+            function s() {}
+            function u() {}
+            e = Object.getPrototypeOf;
+            var l = [][a] ? e(e([][a]())) : (F(e = {}, a, function() {
+                return this
+            }),
+            e)
+              , f = u.prototype = c.prototype = Object.create(l);
+            function p(t) {
+                return Object.setPrototypeOf ? Object.setPrototypeOf(t, u) : (t.__proto__ = u,
+                F(t, r, "GeneratorFunction")),
+                t.prototype = Object.create(f),
+                t
+            }
+            return s.prototype = u,
+            F(f, "constructor", u),
+            F(u, "constructor", s),
+            s.displayName = "GeneratorFunction",
+            F(u, r, "GeneratorFunction"),
+            F(f),
+            F(f, r, "Generator"),
+            F(f, a, function() {
+                return this
+            }),
+            F(f, "toString", function() {
+                return "[object Generator]"
+            }),
+            (M = function() {
+                return {
+                    w: o,
+                    m: p
                 }
             }
-            return {
-                done: true
-            };
-        };
-    }
-}
-
-/**
- * Clean Async Generator
- * Handles async generator operations
- */
-class CleanAsyncGenerator {
-    constructor(gen, skipTempReset) {
-        this.v = gen;
-        this.k = skipTempReset;
-    }
-}
-
-/**
- * Clean Async Iterator
- * Handles async iteration
- */
-class CleanAsyncIterator {
-    constructor(gen, promise) {
-        this.gen = gen;
-        this.promise = promise;
-    }
-
-    /**
-     * Invoke generator
-     * @param {string} method - Method name
-     * @param {*} arg - Argument
-     * @param {Function} resolve - Resolve function
-     * @param {Function} reject - Reject function
-     * @returns {Promise} - Promise
-     */
-    _invoke(method, arg, resolve, reject) {
-        const self = this;
-        
-        function invoke() {
-            return new this.promise(function(resolve, reject) {
-                self.invokeGenerator(method, arg, resolve, reject);
-            });
+            )()
         }
-        
-        return this.promise ? this.promise.then(invoke, invoke) : invoke();
-    }
-
-    /**
-     * Invoke generator method
-     * @param {string} method - Method name
-     * @param {*} arg - Argument
-     * @param {Function} resolve - Resolve function
-     * @param {Function} reject - Reject function
-     */
-    invokeGenerator(method, arg, resolve, reject) {
-        try {
-            const result = this.gen[method](arg);
-            const value = result.value;
-            
-            if (value instanceof CleanAsyncGenerator) {
-                this.promise.resolve(value.v).then(function(result) {
-                    this.invokeGenerator("next", result, resolve, reject);
-                }.bind(this), function(error) {
-                    this.invokeGenerator("throw", error, resolve, reject);
-                }.bind(this));
-            } else {
-                this.promise.resolve(value).then(function(result) {
-                    result.value = result;
-                    resolve(result);
-                }, function(error) {
-                    this.invokeGenerator("throw", error, resolve, reject);
-                }.bind(this));
+        function F(t, e, n, a) {
+            var r = Object.defineProperty;
+            try {
+                r({}, "", {})
+            } catch (t) {
+                r = 0
             }
-        } catch (error) {
-            reject(error);
-        }
-    }
-}
-
-// ============================================================================
-// CLEAN LOGIN FORM COMPONENT
-// ============================================================================
-
-/**
- * Clean Login Form Component
- * A comprehensive login form with captcha, SMS verification, and password reset functionality
- */
-class CleanLoginForm extends React.Component {
-    constructor(props) {
-        super(props);
-        
-        this.state = {
-            CapchaImg: "",
-            capchaBg: "",
-            smsButtinEnable: false,
-            smsButtinDisplay: false,
-            resetButtinEnable: false,
-            resetButtinDisplay: false,
-            userName: ""
-        };
-        
-        this.generator = new CleanGeneratorFactory();
-    }
-
-    /**
-     * Get captcha from server
-     * @param {boolean} forceRefresh - Force refresh captcha
-     */
-    GetCapcha = this.generator.async(function*(forceRefresh) {
-        const { loadingOff, loadingOn } = this.props;
-        const { locale } = this.getCurrentLocale();
-        
-        if (forceRefresh) {
-            loadingOn();
-        }
-        
-        try {
-            const data = { Lng: locale };
-            const response = await this.callService({
-                data: data,
-                Root: "Sec",
-                Path: 0
-            });
-            
-            if (response) {
-                this.setState({ CapchaImg: response.Data.ImgCapcha });
-                
-                if (response.Data.ImgCapcha.length === 0) {
-                    this.saveToLocalStorage({
-                        data: response.Data.ServerTime.toString().substring(
-                            response.Data.ServerTime.toString().length - 4
-                        ),
-                        isObj: false,
-                        saveLocal: true,
-                        localName: "browser"
-                    });
-                }
-                
-                this.getCapchaBg();
-            }
-        } catch (error) {
-            console.error('Error getting captcha:', error);
-        } finally {
-            if (forceRefresh) {
-                loadingOff();
-            }
-        }
-    });
-
-    /**
-     * Get captcha background
-     */
-    getCapchaBg = () => {
-        this.setState({
-            capchaBg: Math.floor(14 * Math.random()) + 1
-        });
-    };
-
-    /**
-     * Get all codes
-     * @param {number} dateTime - Date time
-     */
-    GetAllCode = this.generator.async(function*(dateTime) {
-        if (!this.isValidDateTime(dateTime)) {
-            return;
-        }
-        
-        const { loadingOff } = this.props;
-        
-        try {
-            const response = await this.callService({
-                Loading: false,
-                Root: "Sec",
-                Path: 3
-            });
-            
-            if (response) {
-                const data = {
-                    list: response.Data,
-                    dateTime: dateTime
-                };
-                this.saveToLocalStorage(data);
-            }
-        } catch (error) {
-            console.error('Error getting all codes:', error);
-        } finally {
-            loadingOff();
-        }
-    });
-
-    /**
-     * Get all messages
-     * @param {number} dateTime - Date time
-     */
-    GetAllMessage = this.generator.async(function*(dateTime) {
-        if (!this.isValidMessageDateTime(dateTime)) {
-            return;
-        }
-        
-        try {
-            const response = await this.callService({
-                Loading: false,
-                Root: "Sec",
-                Path: 4
-            });
-            
-            if (response) {
-                const data = {
-                    list: response.Data,
-                    dateTime: dateTime
-                };
-                this.saveToLocalStorage(data);
-            }
-        } catch (error) {
-            console.error('Error getting all messages:', error);
-        }
-    });
-
-    /**
-     * Handle username change
-     * @param {Event} event - Input event
-     */
-    onChangeUserName = (event) => {
-        const value = event.target.value;
-        this.setState({ userName: value });
-        
-        if (this.isValidUsername({ Value: value, ShowNotify: false })) {
-            this.setState({ smsButtinDisplay: true });
-        } else {
-            this.setState({ smsButtinDisplay: false });
-        }
-        
-        const isAdmin = value.toLowerCase().startsWith("admin");
-        this.setState({ resetButtinDisplay: isAdmin });
-    };
-
-    /**
-     * Handle reset password click
-     */
-    handleResetPasswordClick = () => {
-        const scus = document.getElementById("Scus").value.trim();
-        
-        if (scus) {
-            localStorage.setItem("scus", scus);
-        } else {
-            localStorage.removeItem("scus");
-        }
-        
-        this.props.history.push(this.getRoutePath(13));
-    };
-
-    /**
-     * Submit form
-     * @param {Event} event - Form event
-     */
-    submitform = this.generator.async(function*(event) {
-        event.preventDefault();
-        
-        const scus = event.target.Scus.value.trim();
-        const userName = event.target.UserName.value.trim();
-        const password = event.target.Password.value;
-        const capcha = event.target.Capcha ? event.target.Capcha.value : "notCapcha";
-        const appVersion = localStorage.getItem("appVersion");
-        
-        // Validation
-        if (!userName || userName.trim() === "" || !capcha || capcha.trim() === "" || !password || password.trim() === "") {
-            this.showNotification("Please fill all required fields", "warning");
-            return;
-        }
-        
-        // Admin validation
-        if (userName.toLowerCase() !== "admin" && (isNaN(userName) || userName.toLowerCase() === "admin") && scus === "") {
-            this.showNotification("Invalid admin access", "error");
-            return;
-        }
-        
-        const { loadingOff, loadingOn, submitLoginData, setBasketCounter } = this.props;
-        
-        // Save captcha if exists
-        if (this.state.CapchaImg.length > 0) {
-            this.saveToLocalStorage({
-                data: capcha,
-                isObj: false,
-                saveLocal: true,
-                localName: "browser"
-            });
-        }
-        
-        const loginData = {
-            Scus: scus,
-            UserName: userName.toLowerCase(),
-            Password: password,
-            ClientVersion: appVersion,
-            Lng: this.getCurrentLocale().locale
-        };
-        
-        loadingOn();
-        
-        try {
-            const response = await this.callService({
-                data: loginData,
-                Root: "Sec",
-                Path: 1
-            });
-            
-            if (response) {
-                if (response.MessageCode) {
-                    this.showNotification(this.getErrorMessage(response.MessageCode), "error");
-                    
-                    if (response.Data.ImgCapcha.length > 0) {
-                        this.setState({ CapchaImg: response.Data.ImgCapcha });
-                        this.getCapchaBg();
-                    } else {
-                        this.saveToLocalStorage({
-                            data: response.Data.ServerTime.toString().substring(
-                                response.Data.ServerTime.toString().length - 4
-                            ),
-                            isObj: false,
-                            saveLocal: true,
-                            localName: "browser"
-                        });
-                    }
-                } else if (response.Data.status === 1) {
-                    this.props.history.push("/ChangePass");
-                    this.showNotification(response.MessageDes, "warning");
-                } else if (response.Data.status === 2) {
-                    setBasketCounter(response.Data.BasktCnt);
-                    
-                    const userData = Object.assign({}, response.Data, {
-                        Key: this.getFromLocalStorage({
-                            data: loginData.Password,
-                            isObj: false,
-                            saveLocal: false
+            (F = function(t, e, n, a) {
+                if (e)
+                    r ? r(t, e, {
+                        value: n,
+                        enumerable: !a,
+                        configurable: !a,
+                        writable: !a
+                    }) : t[e] = n;
+                else {
+                    var o = function(e, n) {
+                        F(t, e, function(t) {
+                            return this._invoke(e, n, t)
                         })
-                    });
-                    
-                    submitLoginData(userData);
-                    this.props.history.push(this.getRoutePath(3));
+                    };
+                    o("next", 0),
+                    o("throw", 1),
+                    o("return", 2)
                 }
             }
-        } catch (error) {
-            console.error('Login error:', error);
-            this.showNotification("Login failed", "error");
-        } finally {
-            loadingOff();
+            )(t, e, n, a)
         }
-    });
-
-    /**
-     * Send SMS
-     */
-    sendSms = this.generator.async(function*() {
-        const userName = document.getElementById("UserName").value;
-        
-        if (!this.isValidUsername({ Value: userName, Title: this.getTranslation(570) })) {
-            return;
+        function G(t, e) {
+            this.v = t,
+            this.k = e
         }
-        
-        const smsData = { MobileNumber: userName };
-        
-        try {
-            const response = await this.callService({
-                data: smsData,
-                Root: "Sec",
-                Path: 11
-            });
-            
-            if (response) {
-                this.showNotification(response.MessageDes, "success");
-                this.setState({ smsButtinEnable: true });
-                
-                setTimeout(() => {
-                    this.setState({ smsButtinEnable: false });
-                }, 120000); // 2 minutes
-            }
-        } catch (error) {
-            console.error('SMS error:', error);
-        }
-    });
-
-    /**
-     * Component did mount
-     */
-    componentDidMount = this.generator.async(function*() {
-        if (this.isUserLoggedIn()) {
-            this.props.history.push(this.getRoutePath(3));
-            return;
-        }
-        
-        const dateTime = parseInt(this.getCurrentDate().format("jYYYYjMMjDD") + this.getCurrentDate().format("HHmm"));
-        
-        yield this.GetCapcha(true);
-        yield this.GetAllCode(dateTime);
-        yield this.GetAllMessage(dateTime);
-    });
-
-    /**
-     * Render component
-     * @returns {JSX.Element} - Rendered component
-     */
-    render() {
-        const { LoginForm } = this.props;
-        const { CapchaImg } = this.state;
-        
-        return (
-            <React.Fragment>
-                {LoginForm.loading && <LoadingSpinner />}
-                
-                <a href="https://s.isaco.ir/27R" target="_blank" rel="noopener noreferrer">
-                    <img 
-                        src="https://s.isaco.ir/27Q" 
-                        alt="" 
-                        height={250} 
-                        style={{ objectFit: "scale-down" }} 
-                    />
-                </a>
-                
-                <Form onSubmit={this.submitform.bind(this)} noValidate>
-                    <div>
-                        <FormTitle>
-                            {this.getTranslation(29)} 
-                        </FormTitle>
-                        
-                        <div>
-                            <FormInput
-                                name="Scus"
-                                id="Scus"
-                                label={`${this.getTranslation(28)}/${this.getTranslation(578)}`}
-                                pattern="[0-9]+"
-                                minLength={7}
-                                maxLength={10}
-                                dir="ltr"
-                            />
-                        </div>
-                        
-                        <div>
-                            <FormInput
-                                name="UserName"
-                                id="UserName"
-                                label={this.getTranslation(26)}
-                                minLength={2}
-                                required={true}
-                                dir="ltr"
-                                onChange={this.onChangeUserName}
-                            />
-                        </div>
-                        
-                        <div>
-                            <FormInput
-                                name="Password"
-                                id="Password"
-                                type="password"
-                                label={this.getTranslation(27)}
-                                required={true}
-                                minLength={2}
-                                dir="ltr"
-                            />
-                        </div>
-                        
-                        {CapchaImg.length > 0 && (
-                            <React.Fragment>
-                                <CaptchaContainer bg={this.state.capchaBg}>
-                                    <div>
-                                        <img src={CapchaImg} alt="captcha" />
-                                    </div>
-                                    <RefreshButton
-                                        type="button"
-                                        icon="refresh"
-                                        onClick={() => this.GetCapcha(false)}
-                                        title={this.getTranslation(538)}
-                                    />
-                                </CaptchaContainer>
-                                
-                                <div>
-                                    <FormInput
-                                        name="Capcha"
-                                        id="Capcha"
-                                        type="text"
-                                        label={this.getTranslation(536)}
-                                        required={true}
-                                        pattern="[0-9]+"
-                                        dir="ltr"
-                                        autoComplete="off"
-                                    />
-                                </div>
-                            </React.Fragment>
-                        )}
-                        
-                        <SubmitButton
-                            type="submit"
-                            className="k-button"
-                            value={this.getTranslation(5)}
-                        />
-                        
-                        {this.state.smsButtinDisplay && (
-                            <SMSButton
-                                type="button"
-                                className="k-button"
-                                disabled={this.state.smsButtinEnable}
-                                onClick={this.sendSms}
-                                value={this.getTranslation(568)}
-                            />
-                        )}
-                        
-                        {this.state.resetButtinDisplay && (
-                            <ResetButton
-                                type="button"
-                                className="k-button"
-                                onClick={this.handleResetPasswordClick}
-                                value={this.getTranslation(586)}
-                            />
-                        )}
-                    </div>
-                </Form>
-                
-                {this.getCurrentLocale().id === 1 && (
-                    <SupplierLogo>
-                        <img src={this.getSupplierLogo()} alt="" />
-                    </SupplierLogo>
-                )}
-            </React.Fragment>
-        );
-    }
-
-    // ============================================================================
-    // UTILITY METHODS
-    // ============================================================================
-
-    /**
-     * Get current locale
-     * @returns {Object} - Current locale
-     */
-    getCurrentLocale() {
-        return {
-            locale: 'fa',
-            id: 1,
-            language: 'Persian'
-        };
-    }
-
-    /**
-     * Get current date
-     * @returns {Object} - Current date
-     */
-    getCurrentDate() {
-        return {
-            format: (format) => {
-                const now = new Date();
-                const year = now.getFullYear();
-                const month = String(now.getMonth() + 1).padStart(2, '0');
-                const day = String(now.getDate()).padStart(2, '0');
-                const hours = String(now.getHours()).padStart(2, '0');
-                const minutes = String(now.getMinutes()).padStart(2, '0');
-                
-                return format
-                    .replace('jYYYY', year)
-                    .replace('jMM', month)
-                    .replace('jDD', day)
-                    .replace('HH', hours)
-                    .replace('mm', minutes);
-            }
-        };
-    }
-
-    /**
-     * Get translation
-     * @param {string} key - Translation key
-     * @returns {string} - Translated text
-     */
-    getTranslation(key) {
-        const translations = {
-            5: 'ورود',
-            26: 'نام کاربری',
-            27: 'رمز عبور',
-            28: 'کد ملی',
-            29: 'ورود به سیستم',
-            138: 'خطا در ورود',
-            536: 'کد امنیتی',
-            537: 'لطفا کد امنیتی را وارد کنید',
-            538: 'تازه کردن',
-            568: 'ارسال پیامک',
-            570: 'شماره موبایل',
-            578: 'کد ملی',
-            586: 'بازیابی رمز عبور'
-        };
-        
-        return translations[key] || key;
-    }
-
-    /**
-     * Get error message
-     * @param {string} code - Error code
-     * @returns {string} - Error message
-     */
-    getErrorMessage(code) {
-        const errorMessages = {
-            'INVALID_CREDENTIALS': 'نام کاربری یا رمز عبور اشتباه است',
-            'CAPTCHA_REQUIRED': 'کد امنیتی الزامی است',
-            'ACCOUNT_LOCKED': 'حساب کاربری قفل شده است'
-        };
-        
-        return errorMessages[code] || 'خطای نامشخص';
-    }
-
-    /**
-     * Get route path
-     * @param {number} routeId - Route ID
-     * @returns {string} - Route path
-     */
-    getRoutePath(routeId) {
-        const routes = {
-            3: '/dashboard',
-            13: '/reset-password'
-        };
-        
-        return routes[routeId] || '/';
-    }
-
-    /**
-     * Get supplier logo
-     * @returns {string} - Supplier logo URL
-     */
-    getSupplierLogo() {
-        return 'https://s.isaco.ir/supplier-logo.png';
-    }
-
-    /**
-     * Check if user is logged in
-     * @returns {boolean} - True if logged in
-     */
-    isUserLoggedIn() {
-        return localStorage.getItem('userToken') !== null;
-    }
-
-    /**
-     * Validate username
-     * @param {Object} options - Validation options
-     * @returns {boolean} - True if valid
-     */
-    isValidUsername(options) {
-        const { Value, Title } = options;
-        return Value && Value.length >= 2;
-    }
-
-    /**
-     * Validate date time
-     * @param {number} dateTime - Date time
-     * @returns {boolean} - True if valid
-     */
-    isValidDateTime(dateTime) {
-        return dateTime && !isNaN(dateTime);
-    }
-
-    /**
-     * Validate message date time
-     * @param {number} dateTime - Date time
-     * @returns {boolean} - True if valid
-     */
-    isValidMessageDateTime(dateTime) {
-        return dateTime && !isNaN(dateTime);
-    }
-
-    /**
-     * Call service
-     * @param {Object} options - Service options
-     * @returns {Promise} - Service response
-     */
-    async callService(options) {
-        try {
-            const response = await fetch('/api/service', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
+        var _ = function(t) {
+            function e(t) {
+                var n;
+                return Object(o.a)(this, e),
+                (n = Object(c.a)(this, Object(s.a)(e).call(this, t))).GetCapcha = function() {
+                    var t = Object(r.a)(L().mark(function t(e) {
+                        var a, r, o, i, c;
+                        return L().wrap(function(t) {
+                            for (; ; )
+                                switch (t.prev = t.next) {
+                                case 0:
+                                    return a = n.props,
+                                    r = a.loadingOff,
+                                    o = a.loadingOn,
+                                    !0 === e ? o() : r(),
+                                    i = {
+                                        Lng: Object(E.r)().locale
+                                    },
+                                    t.next = 5,
+                                    Object(D.Services)({
+                                        data: i,
+                                        Root: "Sec",
+                                        Path: 0
+                                    });
+                                case 5:
+                                    null != (c = t.sent) && (n.setState({
+                                        CapchaImg: c.Data.ImgCapcha
+                                    }),
+                                    0 === c.Data.ImgCapcha.length && Object(E.k)({
+                                        data: c.Data.ServerTime.toString().substring(c.Data.ServerTime.toString().length - 4),
+                                        isObj: !1,
+                                        saveLocal: !0,
+                                        localName: "browser"
+                                    }),
+                                    n.getCapchaBg()),
+                                    r();
+                                case 8:
+                                case "end":
+                                    return t.stop()
+                                }
+                        }, t)
+                    }));
+                    return function(e) {
+                        return t.apply(this, arguments)
+                    }
+                }(),
+                n.getCapchaBg = function() {
+                    n.setState({
+                        capchaBg: Math.floor(14 * Math.random()) + 1
+                    })
+                }
+                ,
+                n.GetAllCode = function() {
+                    var t = Object(r.a)(L().mark(function t(e) {
+                        var a, r, o;
+                        return L().wrap(function(t) {
+                            for (; ; )
+                                switch (t.prev = t.next) {
+                                case 0:
+                                    if (!Object(E.b)(e)) {
+                                        t.next = 7;
+                                        break
+                                    }
+                                    return a = n.props.loadingOff,
+                                    t.next = 4,
+                                    Object(D.Services)({
+                                        Loading: !1,
+                                        Root: "Sec",
+                                        Path: 3
+                                    });
+                                case 4:
+                                    null != (r = t.sent) && (o = {
+                                        list: r.Data,
+                                        dateTime: e
+                                    },
+                                    Object(E.l)(o)),
+                                    a();
+                                case 7:
+                                case "end":
+                                    return t.stop()
+                                }
+                        }, t)
+                    }));
+                    return function(e) {
+                        return t.apply(this, arguments)
+                    }
+                }(),
+                n.GetAllMessage = function() {
+                    var t = Object(r.a)(L().mark(function t(e) {
+                        var n, a;
+                        return L().wrap(function(t) {
+                            for (; ; )
+                                switch (t.prev = t.next) {
+                                case 0:
+                                    if (!Object(E.c)(e)) {
+                                        t.next = 5;
+                                        break
+                                    }
+                                    return t.next = 3,
+                                    Object(D.Services)({
+                                        Loading: !1,
+                                        Root: "Sec",
+                                        Path: 4
+                                    });
+                                case 3:
+                                    null != (n = t.sent) && (a = {
+                                        list: n.Data,
+                                        dateTime: e
+                                    },
+                                    Object(E.m)(a));
+                                case 5:
+                                case "end":
+                                    return t.stop()
+                                }
+                        }, t)
+                    }));
+                    return function(e) {
+                        return t.apply(this, arguments)
+                    }
+                }(),
+                n.onChangeUserName = function(t) {
+                    var e = t.target.value;
+                    n.setState({
+                        userName: e
+                    }),
+                    Object(C.g)({
+                        Value: e,
+                        ShowNotify: !1
+                    }) ? n.setState({
+                        smsButtinDisplay: !0
+                    }) : n.setState({
+                        smsButtinDisplay: !1
+                    });
+                    var a = e.toLowerCase().startsWith("admin");
+                    n.setState({
+                        resetButtinDisplay: a
+                    })
+                }
+                ,
+                n.handleResetPasswordClick = function() {
+                    var t = document.getElementById("Scus").value.trim();
+                    t ? localStorage.setItem("scus", t) : localStorage.removeItem("scus"),
+                    n.props.history.push(Object(S.e)(13))
+                }
+                ,
+                n.submitform = function() {
+                    var t = Object(r.a)(L().mark(function t(e) {
+                        var r, o, i, c, s, u, f, p, m, b, h, g;
+                        return L().wrap(function(t) {
+                            for (; ; )
+                                switch (t.prev = t.next) {
+                                case 0:
+                                    if (e.preventDefault(),
+                                    r = e.target.Scus.value.trim(),
+                                    o = e.target.UserName.value.trim(),
+                                    i = e.target.Password.value,
+                                    c = e.target.Capcha ? e.target.Capcha.value : "notCapcha",
+                                    s = localStorage.getItem("appVersion"),
+                                    null === o || "" === o.trim() || null === c || "" === c.trim() || null === i || "" === i.trim()) {
+                                        t.next = 20;
+                                        break
+                                    }
+                                    if ("admin" !== o.toLowerCase() && (isNaN(o) || "admin" === o.toLowerCase()) || "" !== r) {
+                                        t.next = 11;
+                                        break
+                                    }
+                                    d.NotificationManager.error(Object(S.g)(138), y.d.Title, y.d.TimeOut),
+                                    t.next = 20;
+                                    break;
+                                case 11:
+                                    return u = n.props,
+                                    f = u.loadingOff,
+                                    p = u.loadingOn,
+                                    m = u.submitLoginData,
+                                    b = u.setBasketCounter,
+                                    n.state.CapchaImg.length > 0 && Object(E.k)({
+                                        data: c,
+                                        isObj: !1,
+                                        saveLocal: !0,
+                                        localName: "browser"
+                                    }),
+                                    h = {
+                                        Scus: r,
+                                        UserName: o.toLowerCase(),
+                                        Password: i,
+                                        ClientVersion: s,
+                                        Lng: Object(E.r)().locale
+                                    },
+                                    p(),
+                                    t.next = 17,
+                                    Object(D.Services)({
+                                        data: h,
+                                        Root: "Sec",
+                                        Path: 1
+                                    });
+                                case 17:
+                                    null != (g = t.sent) && (g.MessageCode ? (d.NotificationManager.error(Object(E.s)(g.MessageCode), y.d.Title, y.d.TimeOut),
+                                    g.Data.ImgCapcha.length > 0 ? (n.setState({
+                                        CapchaImg: g.Data.ImgCapcha
+                                    }),
+                                    n.getCapchaBg()) : Object(E.k)({
+                                        data: g.Data.ServerTime.toString().substring(g.Data.ServerTime.toString().length - 4),
+                                        isObj: !1,
+                                        saveLocal: !0,
+                                        localName: "browser"
+                                    })) : 1 === g.Data.status ? (n.props.history.push("/ChangePass"),
+                                    d.NotificationManager.warning(g.MessageDes)) : 2 === g.Data.status && (b(g.Data.BasktCnt),
+                                    Object(x.l)(Object(a.a)({}, g.Data, {
+                                        Key: Object(E.k)({
+                                            data: h.Password,
+                                            isObj: !1,
+                                            saveLocal: !1
+                                        })
+                                    })),
+                                    m(g.Data),
+                                    n.props.history.push(Object(S.e)(3)))),
+                                    f();
+                                case 20:
+                                    Object(l.isNullOrEmptyString)(c) && d.NotificationManager.warning(Object(S.g)(537), y.g.Title, y.g.TimeOut);
+                                case 21:
+                                case "end":
+                                    return t.stop()
+                                }
+                        }, t)
+                    }));
+                    return function(e) {
+                        return t.apply(this, arguments)
+                    }
+                }(),
+                n.sendSms = Object(r.a)(L().mark(function t() {
+                    var e, a, r;
+                    return L().wrap(function(t) {
+                        for (; ; )
+                            switch (t.prev = t.next) {
+                            case 0:
+                                if (e = document.getElementById("UserName").value,
+                                !Object(C.g)({
+                                    Value: e,
+                                    Title: Object(S.g)(570)
+                                })) {
+                                    t.next = 7;
+                                    break
+                                }
+                                return a = {
+                                    MobileNumber: e
+                                },
+                                t.next = 5,
+                                Object(D.Services)({
+                                    data: a,
+                                    Root: "Sec",
+                                    Path: 11
+                                });
+                            case 5:
+                                null != (r = t.sent) && (d.NotificationManager.success(r.MessageDes, y.f.Title, y.f.TimeOut),
+                                n.setState({
+                                    smsButtinEnable: !0
+                                }),
+                                setTimeout(function() {
+                                    n.setState({
+                                        smsButtinEnable: !1
+                                    })
+                                }, 12e4));
+                            case 7:
+                            case "end":
+                                return t.stop()
+                            }
+                    }, t)
+                })),
+                n.state = {
+                    CapchaImg: "",
+                    capchaBg: "",
+                    smsButtinEnable: !1,
+                    smsButtinDisplay: !1,
+                    resetButtinEnable: !1,
+                    resetButtinDisplay: !1,
+                    userName: ""
                 },
-                body: JSON.stringify(options)
-            });
-            
-            return await response.json();
-        } catch (error) {
-            console.error('Service call error:', error);
-            throw error;
-        }
+                n
+            }
+            return Object(u.a)(e, t),
+            Object(i.a)(e, [{
+                key: "componentDidMount",
+                value: function() {
+                    var t = Object(r.a)(L().mark(function t() {
+                        var e;
+                        return L().wrap(function(t) {
+                            for (; ; )
+                                switch (t.prev = t.next) {
+                                case 0:
+                                    if (!Object(x.i)()) {
+                                        t.next = 4;
+                                        break
+                                    }
+                                    this.props.history.push(Object(S.e)(3)),
+                                    t.next = 11;
+                                    break;
+                                case 4:
+                                    return e = parseInt(b()().format("jYYYYjMMjDD") + b()().format("HHmm")),
+                                    t.next = 7,
+                                    this.GetCapcha(!0);
+                                case 7:
+                                    return t.next = 9,
+                                    this.GetAllCode(e);
+                                case 9:
+                                    return t.next = 11,
+                                    this.GetAllMessage(e);
+                                case 11:
+                                case "end":
+                                    return t.stop()
+                                }
+                        }, t, this)
+                    }));
+                    return function() {
+                        return t.apply(this, arguments)
+                    }
+                }()
+            }, {
+                key: "render",
+                value: function() {
+                    var t = this
+                      , e = this.props.LoginForm
+                      , n = this.state.CapchaImg;
+                    return g.a.createElement(h.Fragment, null, !0 === e.loading && g.a.createElement(k.a, null), g.a.createElement("a", {
+                        href: "https://s.isaco.ir/27R",
+                        target: "_blank",
+                        rel: "noopener noreferrer"
+                    }, g.a.createElement("img", {
+                        src: "https://s.isaco.ir/27Q",
+                        alt: "",
+                        height: 250,
+                        style: {
+                            objectFit: "scale-down"
+                        }
+                    })), g.a.createElement(w.S, {
+                        onSubmit: this.submitform.bind(this),
+                        noValidate: !0
+                    }, g.a.createElement("div", null, g.a.createElement(w.Z, null, Object(S.g)(29), " "), g.a.createElement("div", null, g.a.createElement(w.tb, {
+                        name: "Scus",
+                        id: "Scus",
+                        label: "".concat(Object(S.g)(28), "/").concat(Object(S.g)(578)),
+                        pattern: "[0-9]+",
+                        minLength: 7,
+                        maxLength: 10,
+                        dir: "ltr"
+                    })), g.a.createElement("div", null, g.a.createElement(w.tb, {
+                        name: "UserName",
+                        id: "UserName",
+                        label: Object(S.g)(26),
+                        minLength: 2,
+                        required: !0,
+                        dir: "ltr",
+                        onChange: this.onChangeUserName
+                    })), g.a.createElement("div", null, g.a.createElement(w.tb, {
+                        name: "Password",
+                        id: "Password",
+                        type: "password",
+                        label: Object(S.g)(27),
+                        required: !0,
+                        minLength: 2,
+                        dir: "ltr"
+                    })), n.length > 0 && g.a.createElement(g.a.Fragment, null, g.a.createElement(N.a, {
+                        bg: this.state.capchaBg
+                    }, g.a.createElement("div", null, g.a.createElement("img", {
+                        src: n,
+                        alt: "capcha"
+                    })), g.a.createElement(p.a, {
+                        type: "button",
+                        icon: "refresh",
+                        onClick: function() {
+                            return t.GetCapcha(!1)
+                        },
+                        title: Object(S.g)(538)
+                    })), g.a.createElement("div", null, g.a.createElement(w.tb, {
+                        name: "Capcha",
+                        id: "Capcha",
+                        type: "text",
+                        label: Object(S.g)(536),
+                        required: !0,
+                        pattern: "[0-9]+",
+                        dir: "ltr",
+                        autoComplete: "off"
+                    }))), g.a.createElement(w.q, {
+                        type: "submit",
+                        className: "k-button ",
+                        value: Object(S.g)(5)
+                    }), this.state.smsButtinDisplay && g.a.createElement(w.q, {
+                        type: "button",
+                        className: "k-button ",
+                        disabled: this.state.smsButtinEnable,
+                        onClick: this.sendSms,
+                        value: Object(S.g)(568)
+                    }), this.state.resetButtinDisplay && g.a.createElement(w.q, {
+                        type: "button",
+                        className: "k-button",
+                        onClick: this.handleResetPasswordClick,
+                        value: Object(S.g)(586)
+                    }))), 1 === Object(E.r)().id && g.a.createElement(w.qc, null, g.a.createElement("img", {
+                        src: j.d.ebSuppLogo,
+                        alt: ""
+                    })))
+                }
+            }]),
+            e
+        }(h.Component);
+        e.default = Object(v.b)(function(t) {
+            return {
+                LoginForm: t.LoginForm
+            }
+        }, function(t) {
+            return {
+                submitLoginData: function(e) {
+                    t(Object(O.SubmitLoginData)(e))
+                },
+                errorFetchData: function(e) {
+                    t(Object(O.ErrorFetchData)(e))
+                },
+                startFeching: function() {
+                    t(Object(O.StartFeching)())
+                },
+                loadingOn: function() {
+                    t(Object(O.LoadingOn)())
+                },
+                loadingOff: function() {
+                    t(Object(O.LoadingOff)())
+                },
+                setBasketCounter: function(e) {
+                    t(Object(O.SetBasketCounter)(e))
+                }
+            }
+        })(_)
     }
-
-    /**
-     * Save to local storage
-     * @param {Object} data - Data to save
-     */
-    saveToLocalStorage(data) {
-        if (data.saveLocal) {
-            localStorage.setItem(data.localName, JSON.stringify(data.data));
-        }
-    }
-
-    /**
-     * Get from local storage
-     * @param {Object} options - Storage options
-     * @returns {*} - Stored data
-     */
-    getFromLocalStorage(options) {
-        if (options.saveLocal) {
-            const data = localStorage.getItem(options.localName);
-            return data ? JSON.parse(data) : null;
-        }
-        return options.data;
-    }
-
-    /**
-     * Show notification
-     * @param {string} message - Notification message
-     * @param {string} type - Notification type
-     */
-    showNotification(message, type) {
-        const notification = {
-            title: 'اطلاعیه',
-            timeout: 5000
-        };
-        
-        switch (type) {
-            case 'success':
-                console.log('Success:', message);
-                break;
-            case 'warning':
-                console.warn('Warning:', message);
-                break;
-            case 'error':
-                console.error('Error:', message);
-                break;
-            default:
-                console.log('Info:', message);
-        }
-    }
-}
-
-// ============================================================================
-// CLEAN STYLED COMPONENTS
-// ============================================================================
-
-/**
- * Clean Form Component
- */
-const Form = styled.form`
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-    padding: 2rem;
-    background: #fff;
-    border-radius: 8px;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-`;
-
-/**
- * Clean Form Title
- */
-const FormTitle = styled.h2`
-    text-align: center;
-    color: #333;
-    margin-bottom: 1rem;
-`;
-
-/**
- * Clean Form Input
- */
-const FormInput = styled.input`
-    width: 100%;
-    padding: 0.75rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 1rem;
-    
-    &:focus {
-        outline: none;
-        border-color: #007bff;
-    }
-`;
-
-/**
- * Clean Submit Button
- */
-const SubmitButton = styled.input`
-    background: #007bff;
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 1rem;
-    
-    &:hover {
-        background: #0056b3;
-    }
-`;
-
-/**
- * Clean SMS Button
- */
-const SMSButton = styled.input`
-    background: #28a745;
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 1rem;
-    
-    &:hover:not(:disabled) {
-        background: #1e7e34;
-    }
-    
-    &:disabled {
-        background: #6c757d;
-        cursor: not-allowed;
-    }
-`;
-
-/**
- * Clean Reset Button
- */
-const ResetButton = styled.input`
-    background: #dc3545;
-    color: white;
-    border: none;
-    padding: 0.75rem 1.5rem;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 1rem;
-    
-    &:hover {
-        background: #c82333;
-    }
-`;
-
-/**
- * Clean Captcha Container
- */
-const CaptchaContainer = styled.div`
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-    padding: 1rem;
-    background: #f8f9fa;
-    border-radius: 4px;
-    background-image: url(${props => `https://s.isaco.ir/captcha-bg-${props.bg}.png`});
-    background-size: cover;
-`;
-
-/**
- * Clean Refresh Button
- */
-const RefreshButton = styled.button`
-    background: #6c757d;
-    color: white;
-    border: none;
-    padding: 0.5rem;
-    border-radius: 4px;
-    cursor: pointer;
-    
-    &:hover {
-        background: #545b62;
-    }
-`;
-
-/**
- * Clean Loading Spinner
- */
-const LoadingSpinner = styled.div`
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100px;
-    
-    &::after {
-        content: '';
-        width: 40px;
-        height: 40px;
-        border: 4px solid #f3f3f3;
-        border-top: 4px solid #007bff;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-    }
-    
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-`;
-
-/**
- * Clean Supplier Logo
- */
-const SupplierLogo = styled.div`
-    display: flex;
-    justify-content: center;
-    margin-top: 2rem;
-    
-    img {
-        max-width: 200px;
-        height: auto;
-    }
-`;
-
-// ============================================================================
-// EXPORTS
-// ============================================================================
-
-// Export for Node.js
-if (typeof module !== 'undefined' && module.exports) {
-    module.exports = {
-        CleanLoginForm,
-        CleanGeneratorFactory,
-        CleanAsyncGenerator,
-        CleanAsyncIterator
-    };
-}
-
-// Export for browser
-if (typeof window !== 'undefined') {
-    window.CleanLoginModule = {
-        CleanLoginForm,
-        CleanGeneratorFactory,
-        CleanAsyncGenerator,
-        CleanAsyncIterator
-    };
-}
-
-// Auto-initialize if in browser environment
-if (typeof window !== 'undefined' && !window.CleanLoginInitialized) {
-    window.CleanLoginInitialized = true;
-    console.log('Clean Login Module is ready!');
-}
+}]);

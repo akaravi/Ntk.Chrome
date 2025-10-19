@@ -8,8 +8,7 @@ static class Program
         //ApplicationConfiguration.Initialize();
         //Application.Run(new Forms.MainForm());
         // Run TestDecrypt instead of the main form
-        var testDecrypt = new TestDecrypt();
-        await testDecrypt.RunDecryptionTest();
+        TestDecrypt.RunSimpleTest();
 
         // Keep console open to see results
         Console.WriteLine("\nPress any key to exit...");
