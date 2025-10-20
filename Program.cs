@@ -1,12 +1,36 @@
-namespace Ntk.Chrome;
+﻿using System;
+using System.Windows.Forms;
 
-static class Program
+namespace Ntk.Chrome
 {
-    [STAThread]
-    static async Task Main()
+    static class Program
     {
-        ApplicationConfiguration.Initialize();
-        Application.Run(new Forms.MainForm());
+        [STAThread]
+        static void Main()
+        {
+            Application.EnableVisualStyles();
+            Application.SetCompatibleTextRenderingDefault(false);
+            Application.Run(new Forms.MainForm());
+        }
 
+
+        //public static void Main(string[] args)
+        //{
+        //    Console.WriteLine("=== شروع تست رمزگشایی ===");
+
+        //    try
+        //    {
+        //        string result = ""; TestDecrypt_AES.RunTest();
+        //        Console.WriteLine($"نتیجه نهایی: {result}");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        Console.WriteLine($"خطا: {ex.Message}");
+        //        Console.WriteLine($"Stack Trace: {ex.StackTrace}");
+        //    }
+
+        //    Console.WriteLine("\nPress any key to exit...");
+        //    Console.ReadKey();
+        //}
     }
 }
