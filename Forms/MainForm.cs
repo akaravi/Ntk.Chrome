@@ -120,15 +120,7 @@ public partial class MainForm : Form
 
             _logger.Information("شروع راه‌اندازی برنامه...");
 
-            // ایجاد پوشه‌های لازم
-            Directory.CreateDirectory("logs");
-            Directory.CreateDirectory(Path.Combine(Application.StartupPath, "ChromeDriver"));
 
-            // راه‌اندازی سرویس ChromeDriver
-            await _chromeDriverService.InitializeAsync();
-            
-            // بررسی و نمایش نسخه‌های فعلی
-            await CheckAndDisplayVersionsAsync();
             
             // بررسی وجود فایل تنظیمات و نمایش فرم تنظیمات در صورت عدم وجود
             if (!File.Exists("settings.json"))
@@ -143,6 +135,15 @@ public partial class MainForm : Form
                 }
                 _logger.Information("تنظیمات با موفقیت ذخیره شد");
             }
+            // ایجاد پوشه‌های لازم
+            Directory.CreateDirectory("logs");
+            Directory.CreateDirectory(Path.Combine(Application.StartupPath, "ChromeDriver"));
+
+            // راه‌اندازی سرویس ChromeDriver
+            await _chromeDriverService.InitializeAsync();
+
+            // بررسی و نمایش نسخه‌های فعلی
+            await CheckAndDisplayVersionsAsync();
 
             // بررسی وجود فایل تنظیمات سایت و نمایش فرم تنظیمات سایت در صورت عدم وجود
             if (!File.Exists("website_settings.json"))
@@ -649,24 +650,7 @@ public partial class MainForm : Form
             _logger.Error(ex, "خطا در بررسی نسخه‌ها");
         }
     }
-    
-    private void btnTest_Click(object sender, EventArgs e)
-    {
-        try
-        {
-            using var testForm = new TestForm(_logger, _chromeDriverService);
-            testForm.ShowDialog();
-        }
-        catch (Exception ex)
-        {
-            _logger.Error(ex, "خطا در باز کردن فرم تست");
-            MessageBox.Show(
-                $"خطا در باز کردن فرم تست:\n{ex.Message}",
-                "خطا",
-                MessageBoxButtons.OK,
-                MessageBoxIcon.Error);
-        }
-    }
+   
     
     #endregion
 }
